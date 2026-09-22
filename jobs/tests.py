@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.db import IntegrityError
 from jobs.models import Job, UserJob, normalize_job_url
 from jobs.services import JobDeduplicationService, toggle_save_job, toggle_ignore_job, create_manual_job
-from jobs import selectors
+from jobs import selectors, services
 from matching.services import calculate_match_score, MATCH_WEIGHTS
 
 class JobModelTests(TestCase):
@@ -265,3 +265,43 @@ class JobViewsTests(TestCase):
         })
         self.assertEqual(response.status_code, 302)
         self.assertTrue(Job.objects.filter(title='React Engineer').exists())
+
+    def test_experience_filtering(self):
+        # Create jobs with specific experience requirements
+        Job.objects.create(
+            title="Junior Python Dev",
+            company_name="JuniorCo",
+            experience_min=1.0,
+            experience_max=2.0,
+            is_active=True
+        )
+        Job.objects.create(
+            title="Principal Architect",
+            company_name="BigCo",
+            experience_min=10.0,
+            is_active=True
+        )
+
+        # Filter by 0-2 years
+        entry_jobs = selectors.filter_and_search_jobs(user=self.user, experience='0-2')
+        titles_entry = [j['job'].title for j in entry_jobs]
+        self.assertIn("Junior Python Dev", titles_entry)
+        self.assertNotIn("Principal Architect", titles_entry)
+
+        # Filter by 8+ years
+        lead_jobs = selectors.filter_and_search_jobs(user=self.user, experience='8+')
+        titles_lead = [j['job'].title for j in lead_jobs]
+        self.assertIn("Principal Architect", titles_lead)
+        self.assertNotIn("Junior Python Dev", titles_lead)
+
+    def test_parse_experience_requirements_service(self):
+        min_y, max_y = services.parse_experience_requirements(
+            "Senior Backend Engineer",
+            "Must have 4 to 6 years of experience in distributed systems."
+        )
+        self.assertEqual(min_y, 4.0)
+        self.assertEqual(max_y, 6.0)
+
+        min_y2, _ = services.parse_experience_requirements("Junior Associate", "Fresh graduates welcome.")
+        self.assertEqual(min_y2, 1.0)
+

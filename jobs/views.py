@@ -25,6 +25,7 @@ def job_list_view(request):
     source = request.GET.get('source', '').strip()
     min_score_str = request.GET.get('min_score', '').strip()
     min_score = int(min_score_str) if min_score_str.isdigit() else None
+    experience = request.GET.get('experience', '').strip()
     date_range = request.GET.get('date', '').strip()
     show_ignored = request.GET.get('show_ignored', '').lower() in ('true', '1', 'on')
     sort_by = request.GET.get('sort', 'newest').strip()
@@ -38,6 +39,7 @@ def job_list_view(request):
         employment_type=employment_type,
         source=source,
         min_score=min_score,
+        experience=experience,
         date_range=date_range,
         show_ignored=show_ignored,
         sort_by=sort_by
@@ -52,6 +54,14 @@ def job_list_view(request):
     stats = selectors.get_dashboard_statistics(request.user)
     available_locations = selectors.get_distinct_locations()
 
+    experience_choices = [
+        ('', 'All Experience Levels'),
+        ('0-2', '0 - 2 Years (Entry / Junior)'),
+        ('3-5', '3 - 5 Years (Mid-Level)'),
+        ('5-8', '5 - 8 Years (Senior)'),
+        ('8+', '8+ Years (Lead / Staff)'),
+    ]
+
     return render(request, 'jobs/job_list.html', {
         'page_obj': page_obj,
         'total_count': len(items),
@@ -60,6 +70,7 @@ def job_list_view(request):
         'work_modes': Job.WorkMode.choices,
         'employment_types': Job.EmploymentType.choices,
         'sources': Job.Source.choices,
+        'experience_choices': experience_choices,
         # Active filter values
         'query': query,
         'selected_location': location,
@@ -67,10 +78,28 @@ def job_list_view(request):
         'selected_employment_type': employment_type,
         'selected_source': source,
         'selected_min_score': min_score_str,
+        'selected_experience': experience,
         'selected_date': date_range,
         'show_ignored': show_ignored,
         'sort_by': sort_by,
     })
+
+
+@login_required
+@require_POST
+def fetch_real_jobs_view(request):
+    """Fetches real live jobs from external APIs and syncs with candidate profile."""
+    limit = int(request.POST.get('limit', 30))
+    result = services.fetch_and_sync_real_jobs(user=request.user, limit=limit)
+
+    msg = f"Synced real live jobs! Added {result['created']} new opportunities."
+    if result['updated']:
+        msg += f" Refreshed {result['updated']} active postings."
+    messages.success(request, msg)
+
+    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'jobs:list'
+    return redirect(next_url)
+
 
 
 @login_required

@@ -220,11 +220,16 @@ class Job(models.Model):
 
     @property
     def formatted_experience(self):
-        if self.experience_min and self.experience_max:
+        if self.experience_min is not None and self.experience_max is not None:
+            if self.experience_min == 0 and self.experience_max <= 2:
+                return f"Entry Level (0 - {self.experience_max:g} yrs)"
             return f"{self.experience_min:g} - {self.experience_max:g} yrs"
-        if self.experience_min and self.experience_min > 0:
+        if self.experience_min is not None and self.experience_min > 0:
             return f"{self.experience_min:g}+ yrs"
+        if self.experience_min == 0:
+            return "Entry Level"
         return "Not specified"
+
 
     @property
     def is_new(self):

@@ -1,3 +1,4 @@
+import re
 from typing import Dict, Any, List, Optional
 from datetime import timedelta
 from django.utils import timezone
@@ -71,6 +72,7 @@ def filter_and_search_jobs(
     employment_type: str = '',
     source: str = '',
     min_score: Optional[int] = None,
+    experience: str = '',
     date_range: str = '',
     show_ignored: bool = False,
     sort_by: str = 'newest'
@@ -92,6 +94,19 @@ def filter_and_search_jobs(
             Q(description__icontains=query_stripped)
         )
 
+        # Also detect if query explicitly mentions years of experience (e.g. '3 years', '5 yrs')
+        if not experience:
+            exp_in_query = re.search(r'(\d+(?:\.\d+)?)\s*(?:years?|yrs)', query_stripped, re.IGNORECASE)
+            if exp_in_query:
+                try:
+                    target_exp = float(exp_in_query.group(1))
+                    qs = qs.filter(
+                        Q(experience_min__lte=target_exp + 1.0) &
+                        (Q(experience_max__gte=target_exp - 1.0) | Q(experience_max__isnull=True))
+                    )
+                except ValueError:
+                    pass
+
     # Location filter
     if location:
         qs = qs.filter(location__icontains=location.strip())
@@ -107,6 +122,34 @@ def filter_and_search_jobs(
     # Source filter
     if source:
         qs = qs.filter(source=source.strip())
+
+    # Years of experience filter
+    if experience:
+        exp_clean = experience.strip().lower()
+        if exp_clean in ('0-2', 'entry', 'junior'):
+            qs = qs.filter(experience_min__lte=2.0)
+        elif exp_clean in ('3-5', 'mid'):
+            qs = qs.filter(
+                Q(experience_min__gte=2.0, experience_min__lte=5.0) |
+                Q(experience_max__gte=3.0, experience_min__lte=3.5)
+            )
+        elif exp_clean in ('5-8', 'senior'):
+            qs = qs.filter(
+                Q(experience_min__gte=4.5, experience_min__lte=8.5) |
+                Q(experience_max__gte=5.0, experience_min__lte=5.5)
+            )
+        elif exp_clean in ('8+', 'lead', 'staff', 'principal'):
+            qs = qs.filter(experience_min__gte=7.5)
+        else:
+            try:
+                exp_num = float(exp_clean)
+                qs = qs.filter(
+                    Q(experience_min__lte=exp_num) &
+                    (Q(experience_max__gte=exp_num) | Q(experience_max__isnull=True) | Q(experience_max=0))
+                )
+            except ValueError:
+                pass
+
 
     # Date posted/discovered filter
     now = timezone.now()

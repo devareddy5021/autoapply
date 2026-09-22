@@ -14,12 +14,19 @@
         <h2 class="fw-bold mb-1 text-dark">Job Search & Dashboard</h2>
         <p class="text-muted small mb-0">Showing {{ total_count }} active opportunities evaluated by deterministic matching.</p>
     </div>
-    <div class="col-md-5 text-md-end mt-3 mt-md-0">
-        <a href="{% url 'jobs:create' %}" class="btn btn-primary-custom d-inline-flex align-items-center gap-2">
+    <div class="col-md-5 text-md-end mt-3 mt-md-0 d-flex justify-content-md-end gap-2 align-items-center">
+        <form method="post" action="{% url 'jobs:fetch_real_jobs' %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-1 shadow-sm" title="Fetch fresh, live jobs from Remotive & Arbeitnow">
+                <i class="bi bi-cloud-arrow-down-fill"></i> Fetch Real Jobs
+            </button>
+        </form>
+        <a href="{% url 'jobs:create' %}" class="btn btn-primary-custom btn-sm d-inline-flex align-items-center gap-1">
             <i class="bi bi-plus-lg"></i> Add Job Manually
         </a>
     </div>
 </div>
+
 
 <!-- Real Dashboard Statistics Cards (Section 11) -->
 <div class="row g-3 mb-4">
@@ -104,7 +111,7 @@
         <!-- Row 2: Filter Dropdowns -->
         <div class="row g-2 align-items-center">
             <!-- Location -->
-            <div class="col-sm-6 col-md-3 col-lg-2">
+            <div class="col-sm-6 col-md-4 col-lg-2">
                 <label class="form-label small fw-semibold text-muted mb-1">Location</label>
                 <select name="location" class="form-select form-select-sm">
                     <option value="">All Locations</option>
@@ -114,8 +121,21 @@
                 </select>
             </div>
 
+            <!-- Years of Experience Filter (Requested) -->
+            <div class="col-sm-6 col-md-4 col-lg-2">
+                <label class="form-label small fw-semibold text-muted mb-1 d-flex justify-content-between">
+                    <span>Experience</span>
+                    <span class="badge bg-light text-primary border py-0 px-1 extra-small">Years</span>
+                </label>
+                <select name="experience" class="form-select form-select-sm">
+                    {% for val, label in experience_choices %}
+                        <option value="{{ val }}" {% if selected_experience == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
             <!-- Work Mode -->
-            <div class="col-sm-6 col-md-3 col-lg-2">
+            <div class="col-sm-6 col-md-4 col-lg-2">
                 <label class="form-label small fw-semibold text-muted mb-1">Work Mode</label>
                 <select name="work_mode" class="form-select form-select-sm">
                     <option value="">All Modes</option>
@@ -126,7 +146,7 @@
             </div>
 
             <!-- Employment Type -->
-            <div class="col-sm-6 col-md-3 col-lg-2">
+            <div class="col-sm-6 col-md-4 col-lg-2">
                 <label class="form-label small fw-semibold text-muted mb-1">Employment Type</label>
                 <select name="employment_type" class="form-select form-select-sm">
                     <option value="">All Types</option>
@@ -137,7 +157,7 @@
             </div>
 
             <!-- Source -->
-            <div class="col-sm-6 col-md-3 col-lg-2">
+            <div class="col-sm-6 col-md-4 col-lg-2">
                 <label class="form-label small fw-semibold text-muted mb-1">Source</label>
                 <select name="source" class="form-select form-select-sm">
                     <option value="">All Sources</option>
@@ -148,29 +168,30 @@
             </div>
 
             <!-- Match Score -->
-            <div class="col-sm-6 col-md-3 col-lg-2">
-                <label class="form-label small fw-semibold text-muted mb-1">Match Score</label>
-                <select name="min_score" class="form-select form-select-sm">
-                    <option value="">Any Match %</option>
-                    <option value="90" {% if selected_min_score == '90' %}selected{% endif %}>90%+ Match</option>
-                    <option value="80" {% if selected_min_score == '80' %}selected{% endif %}>80%+ Match</option>
-                    <option value="70" {% if selected_min_score == '70' %}selected{% endif %}>70%+ Match</option>
-                    <option value="50" {% if selected_min_score == '50' %}selected{% endif %}>50%+ Match</option>
+            <div class="col-sm-6 col-md-2 col-lg-1">
+                <label class="form-label small fw-semibold text-muted mb-1">Fit</label>
+                <select name="min_score" class="form-select form-select-sm px-1">
+                    <option value="">Any</option>
+                    <option value="90" {% if selected_min_score == '90' %}selected{% endif %}>90%+</option>
+                    <option value="80" {% if selected_min_score == '80' %}selected{% endif %}>80%+</option>
+                    <option value="70" {% if selected_min_score == '70' %}selected{% endif %}>70%+</option>
+                    <option value="50" {% if selected_min_score == '50' %}selected{% endif %}>50%+</option>
                 </select>
             </div>
 
             <!-- Date Filter -->
-            <div class="col-sm-6 col-md-3 col-lg-2">
+            <div class="col-sm-6 col-md-2 col-lg-1">
                 <label class="form-label small fw-semibold text-muted mb-1">Date</label>
-                <select name="date" class="form-select form-select-sm">
-                    <option value="">Any Time</option>
+                <select name="date" class="form-select form-select-sm px-1">
+                    <option value="">Any</option>
                     <option value="today" {% if selected_date == 'today' %}selected{% endif %}>Today</option>
-                    <option value="3days" {% if selected_date == '3days' %}selected{% endif %}>Last 3 days</option>
-                    <option value="7days" {% if selected_date == '7days' %}selected{% endif %}>Last 7 days</option>
-                    <option value="30days" {% if selected_date == '30days' %}selected{% endif %}>Last 30 days</option>
+                    <option value="3days" {% if selected_date == '3days' %}selected{% endif %}>3 days</option>
+                    <option value="7days" {% if selected_date == '7days' %}selected{% endif %}>7 days</option>
+                    <option value="30days" {% if selected_date == '30days' %}selected{% endif %}>30 days</option>
                 </select>
             </div>
         </div>
+
 
         <!-- Row 3: Sorting & Options -->
         <div class="row g-2 align-items-center mt-2 pt-2 border-top">
@@ -233,9 +254,12 @@
                     <span class="fw-bold text-dark">{{ item.job.formatted_salary }}</span>
                 </div>
                 <div>
-                    <i class="bi bi-hourglass-split me-1 text-muted"></i>{{ item.job.formatted_experience }}
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-1 px-2" title="Required Years of Experience">
+                        <i class="bi bi-briefcase me-1"></i>{{ item.job.formatted_experience }}
+                    </span>
                 </div>
             </div>
+
 
             <!-- Required Skills Pills -->
             <div class="mb-3 flex-grow-1">
