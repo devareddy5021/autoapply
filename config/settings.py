@@ -21,6 +21,8 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-jobautoapply-prod-ready-se
 DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 't')
 
 ALLOWED_HOSTS = [host.strip() for host in os.getenv('ALLOWED_HOSTS', '*').split(',') if host.strip()]
+if 'testserver' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('testserver')
 
 # Application definition
 INSTALLED_APPS = [
@@ -175,7 +177,9 @@ REST_FRAMEWORK = {
 }
 
 # Milestone 3 — Chrome Browser Automation Settings
+os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 PLAYWRIGHT_HEADLESS = os.getenv('PLAYWRIGHT_HEADLESS', 'False').lower() in ('true', '1')
 AUTOMATION_TEST_MODE = os.getenv('AUTOMATION_TEST_MODE', 'True').lower() in ('true', '1')
 BROWSER_PROFILE_DIR = BASE_DIR / 'browser_profile'
 os.makedirs(BROWSER_PROFILE_DIR, exist_ok=True)
+

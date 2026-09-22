@@ -1,3 +1,4 @@
+import os
 import threading
 import logging
 from typing import Optional
@@ -6,12 +7,16 @@ from applications.models import Application
 from .application_runner import ApplicationRunner
 from .base import AutomationResult
 
+os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
+
 logger = logging.getLogger(__name__)
 
 
 def _run_preparation_worker(application_id: int, headless: Optional[bool] = None):
     """Background thread target for application preparation."""
+    os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
     db.connections.close_all()
+
     try:
         app = Application.objects.select_related('user', 'job', 'resume', 'user__profile').get(pk=application_id)
         runner = ApplicationRunner(app, headless=headless)
@@ -24,6 +29,7 @@ def _run_preparation_worker(application_id: int, headless: Optional[bool] = None
 
 def _run_submission_worker(application_id: int, headless: Optional[bool] = None):
     """Background thread target for confirmed submission."""
+    os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
     db.connections.close_all()
     try:
         app = Application.objects.select_related('user', 'job', 'resume', 'user__profile').get(pk=application_id)

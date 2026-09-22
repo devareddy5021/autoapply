@@ -1,9 +1,13 @@
+import os
 import time
 import logging
 from typing import Optional, Dict, Any, List
 from django.utils import timezone
 from applications.models import Application, AutomationLog
 from resumes.models import Resume
+
+os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
+
 
 from .base import AutomationResult, FormDetectionResult
 from .browser import BrowserManager
@@ -43,6 +47,7 @@ class ApplicationRunner:
 
     def _update_status(self, app_status: str, auto_status: str, message: str = ""):
         """Updates Application state in DB and logs audit action."""
+        os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
         self.application.status = app_status
         self.application.automation_status = auto_status
         if message:
@@ -208,6 +213,7 @@ class ApplicationRunner:
             return AutomationResult(success=False, status="FAILED", message=err_msg, error_details=err_msg)
 
     def _handle_failure(self, auto_status: str, error_msg: str, status: str = Application.Status.FAILED):
+        os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
         self.application.status = status
         self.application.automation_status = auto_status
         self.application.error_message = error_msg

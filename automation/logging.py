@@ -1,8 +1,12 @@
+import os
 import re
 import logging
 from typing import Optional
 from django.utils import timezone
 from applications.models import Application, AutomationLog
+
+os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
+
 
 logger = logging.getLogger('automation')
 
@@ -31,6 +35,7 @@ class ApplicationAuditLogger:
         self.application = application
 
     def log(self, level: str, action: str, message: str) -> AutomationLog:
+        os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
         clean_msg = sanitize_message(message)
         logger.log(
             getattr(logging, level.upper(), logging.INFO),
