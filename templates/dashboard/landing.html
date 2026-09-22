@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block title %}JobAutoApply - Smart Job Discovery & Application Automation{% endblock %}
+
+{% block content %}
+<div class="row align-items-center py-5">
+    <div class="col-lg-7 mb-4 mb-lg-0">
+        <span class="badge bg-primary-subtle text-primary fw-semibold px-3 py-2 rounded-pill mb-3">
+            <i class="bi bi-stars me-1"></i> Ethical & Transparent Job Search Copilot
+        </span>
+        <h1 class="display-4 fw-extrabold text-dark tracking-tight mb-3">
+            Land your dream role with <span class="text-primary">transparent matching</span> and assisted applications.
+        </h1>
+        <p class="lead text-muted mb-4">
+            Discover vetted opportunities from top platforms, inspect algorithmic match scores tailored to your profile and PDF resumes, and apply efficiently through assisted browser workflows that keep you in full control.
+        </p>
+        <div class="d-flex flex-wrap gap-3 mb-4">
+            <a href="{% url 'accounts:register' %}" class="btn btn-primary-custom btn-lg d-inline-flex align-items-center gap-2">
+                <i class="bi bi-person-plus-fill"></i> Get Started Free
+            </a>
+            <a href="{% url 'accounts:login' %}" class="btn btn-outline-custom btn-lg d-inline-flex align-items-center gap-2">
+                <i class="bi bi-box-arrow-in-right"></i> Sign In
+            </a>
+        </div>
+        <div class="d-flex align-items-center gap-4 text-muted small">
+            <div><i class="bi bi-shield-check text-success me-1"></i> Human Approval Required</div>
+            <div><i class="bi bi-file-earmark-pdf text-danger me-1"></i> PDF Resume Text Extraction</div>
+            <div><i class="bi bi-graph-up-arrow text-primary me-1"></i> Transparent Match Breakdown</div>
+        </div>
+    </div>
+    
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-lg rounded-4 p-4 bg-white position-relative">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="badge source-linkedin badge-source">LinkedIn</span>
+                <span class="score-badge score-high">
+                    <i class="bi bi-lightning-charge-fill"></i> 94% Match
+                </span>
+            </div>
+            <h5 class="fw-bold mb-1">Senior Python & Django Engineer</h5>
+            <div class="text-muted small mb-3">CloudScale Systems &bull; Remote &bull; $140K - $175K</div>
+            
+            <div class="mb-3">
+                <div class="d-flex justify-content-between small fw-medium mb-1">
+                    <span>Compatibility Index</span>
+                    <span class="text-success fw-bold">94 / 100</span>
+                </div>
+                <div class="match-meter">
+                    <div class="match-meter-fill bg-success" style="width: 94%;"></div>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <div class="small text-muted mb-1">Matched Skills:</div>
+                <div>
+                    <span class="skill-pill matched"><i class="bi bi-check me-1"></i>Python</span>
+                    <span class="skill-pill matched"><i class="bi bi-check me-1"></i>Django</span>
+                    <span class="skill-pill matched"><i class="bi bi-check me-1"></i>PostgreSQL</span>
+                    <span class="skill-pill matched"><i class="bi bi-check me-1"></i>Docker</span>
+                </div>
+            </div>
+            
+            <div class="d-grid mt-2">
+                <a href="{% url 'accounts:register' %}" class="btn btn-outline-primary rounded-3">
+                    View Live Matches
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="row g-4 py-4 mt-2">
+    <div class="col-md-4">
+        <div class="stat-card h-100">
+            <div class="stat-icon-wrapper stat-icon-primary mb-3">
+                <i class="bi bi-cpu-fill"></i>
+            </div>
+            <h5 class="fw-bold mb-2">Transparent Match Scoring</h5>
+            <p class="text-muted small mb-0">
+                Never wonder why a job was recommended. See exact points awarded for role title, technical skills, location, work-mode preference, and experience.
+            </p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card h-100">
+            <div class="stat-icon-wrapper stat-icon-accent mb-3">
+                <i class="bi bi-file-earmark-diff-fill"></i>
+            </div>
+            <h5 class="fw-bold mb-2">Resume Intelligence</h5>
+            <p class="text-muted small mb-0">
+                Upload your PDF resumes. Text extraction automatically indexes your verified skill set and experience keywords to tailor scores for each listing.
+            </p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card h-100">
+            <div class="stat-icon-wrapper stat-icon-success mb-3">
+                <i class="bi bi-check-circle-fill"></i>
+            </div>
+            <h5 class="fw-bold mb-2">Assisted Human-in-the-Loop</h5>
+            <p class="text-muted small mb-0">
+                Full compliance with website policies. Auto-fills your verified information in Chrome while strictly requiring your review and confirmation before final submission.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

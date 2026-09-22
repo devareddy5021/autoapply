@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}Sign In - JobAutoApply{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-5">
+    <div class="col-md-6 col-lg-5">
+        <div class="card border-0 shadow-lg rounded-4 p-4 p-sm-5 bg-white">
+            <div class="text-center mb-4">
+                <div class="brand-icon mx-auto mb-3" style="width: 48px; height: 48px; font-size: 1.5rem;">
+                    <i class="bi bi-robot"></i>
+                </div>
+                <h3 class="fw-bold mb-1">Welcome Back</h3>
+                <p class="text-muted small">Sign in to your JobAutoApply copilot account</p>
+            </div>
+
+            <form method="post" novalidate>
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-muted" for="id_username">Username</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-person text-muted"></i></span>
+                        <input type="text" name="username" autofocus required class="form-control border-start-0" id="id_username" placeholder="Your username">
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-semibold text-muted" for="id_password">Password</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-key text-muted"></i></span>
+                        <input type="password" name="password" required class="form-control border-start-0" id="id_password" placeholder="••••••••">
+                    </div>
+                </div>
+
+                <div class="d-grid mb-3">
+                    <button type="submit" class="btn btn-primary-custom btn-lg">
+                        Sign In <i class="bi bi-arrow-right ms-1"></i>
+                    </button>
+                </div>
+            </form>
+
+            <div class="text-center mt-3 pt-3 border-top">
+                <p class="small text-muted mb-0">
+                    Don't have an account? <a href="{% url 'accounts:register' %}" class="text-primary fw-semibold text-decoration-none">Create an account</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

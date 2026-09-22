@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+
+{% block title %}Application Details: {{ application.job.title }} - JobAutoApply{% endblock %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-8">
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <a href="{% url 'applications:list' %}" class="btn btn-sm btn-light border rounded-circle"><i class="bi bi-arrow-left"></i></a>
+            <span class="app-status-badge badge-{{ application.status|lower }}">{{ application.get_status_display }}</span>
+            <span class="badge bg-light text-dark border small"><i class="bi bi-robot me-1 text-primary"></i>{{ application.get_automation_status_display }}</span>
+        </div>
+        <h2 class="fw-bold mb-1 text-dark">{{ application.job.title }}</h2>
+        <div class="text-muted small">
+            <strong>{{ application.job.company }}</strong> &bull; {{ application.job.location }} &bull; Added {{ application.created_at|date:"M d, Y" }}
+        </div>
+    </div>
+    <div class="col-md-4 text-md-end mt-3 mt-md-0">
+        {% if application.job.external_url %}
+            <a href="{{ application.job.external_url }}" target="_blank" class="btn btn-primary-custom btn-sm">
+                <i class="bi bi-box-arrow-up-right me-1"></i> Open Application Page
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Left Column: Review & Field Answers Audit -->
+    <div class="col-lg-7">
+        <!-- Human Review Card -->
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                    <i class="bi bi-shield-lock-fill text-primary"></i> Application Review
+                </h5>
+                <span class="badge bg-secondary-subtle text-secondary px-3 py-1 rounded-pill small">
+                    AUTO_SUBMIT = False (Strict Human-in-the-Loop)
+                </span>
+            </div>
+
+            <div class="alert alert-info border-0 rounded-3 p-3 mb-3 d-flex gap-2 align-items-start">
+                <i class="bi bi-info-circle-fill text-primary fs-5 mt-1"></i>
+                <div class="small">
+                    <strong>Review Mode Active:</strong> JobAutoApply never silently submits applications without your explicit review and confirmation. Verify your attached resume and answers before updating status.
+                </div>
+            </div>
+
+            <!-- Pre-filled & User Verified Fields -->
+            <div class="mb-4">
+                <h6 class="fw-bold text-muted small text-uppercase mb-2">Verified Profile & Resume Data</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered rounded-3 small mb-0">
+                        <tbody>
+                            <tr>
+                                <td class="bg-light fw-semibold text-muted" style="width: 35%;">Applicant Name</td>
+                                <td>{{ user.profile.display_name }}</td>
+                            </tr>
+                            <tr>
+                                <td class="bg-light fw-semibold text-muted">Email</td>
+                                <td>{{ user.email }}</td>
+                            </tr>
+                            <tr>
+                                <td class="bg-light fw-semibold text-muted">Phone</td>
+                                <td>{{ user.profile.phone|default:"Not specified" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="bg-light fw-semibold text-muted">Work Authorization</td>
+                                <td>{{ user.profile.work_authorization|default:"Not specified" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="bg-light fw-semibold text-muted">Notice Period</td>
+                                <td>{{ user.profile.notice_period_days }} days</td>
+                            </tr>
+                            <tr>
+                                <td class="bg-light fw-semibold text-muted">Selected Resume</td>
+                                <td>
+                                    {% if application.resume %}
+                                        <i class="bi bi-file-earmark-pdf text-danger me-1"></i>{{ application.resume.name }} (v{{ application.resume.version }})
+                                    {% else %}
+                                        <span class="text-warning"><i class="bi bi-exclamation-circle me-1"></i>No resume attached</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Form Answers / Questions Section -->
+            <div>
+                <h6 class="fw-bold text-muted small text-uppercase mb-2">Recorded Form Questions & Answers</h6>
+                {% if application.answers %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover small mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Question</th>
+                                    <th>Answered Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for q, a in application.answers.items %}
+                                <tr>
+                                    <td class="fw-medium text-dark">{{ q }}</td>
+                                    <td>{{ a }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="p-3 bg-light rounded-3 text-muted small">
+                        <i class="bi bi-check2-circle me-1 text-success"></i> No custom form questions recorded yet. Standard fields are automatically mapped from your profile.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Job Opportunity Card -->
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+            <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                <i class="bi bi-briefcase text-secondary"></i> Associated Job Details
+            </h5>
+            <div class="small text-muted mb-2">
+                <strong>Compensation:</strong> {{ application.job.formatted_salary }} &bull; 
+                <strong>Experience:</strong> {{ application.job.experience_required_years }} Yrs &bull; 
+                <strong>Work Style:</strong> {{ application.job.get_work_mode_display }}
+            </div>
+            <div class="small text-dark p-3 bg-light rounded-3" style="max-height: 250px; overflow-y: auto; white-space: pre-wrap;">
+{{ application.job.description }}
+            </div>
+            <div class="mt-3 text-end">
+                <a href="{% url 'jobs:detail' application.job.pk %}" class="btn btn-sm btn-outline-secondary">
+                    View Full Job Posting & Score Breakdown <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Update Application & Notes -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+            <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                <i class="bi bi-pencil-square text-success"></i> Manage Status & Notes
+            </h5>
+
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-muted">Tracking Pipeline Status</label>
+                    {{ form.status }}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-muted">Attached Resume</label>
+                    {{ form.resume }}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-muted">Direct Application URL</label>
+                    {{ form.application_url }}
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-semibold text-muted">Interview Notes & Follow-ups</label>
+                    {{ form.notes }}
+                    <div class="form-text small">Record recruiter names, interview dates, feedback, etc.</div>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary-custom">
+                        <i class="bi bi-check2-circle me-1"></i> Update Application
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Quick Timeline Card -->
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+            <h6 class="fw-bold text-muted small text-uppercase mb-3">Timeline</h6>
+            <div class="small text-muted d-flex flex-column gap-2">
+                <div>
+                    <i class="bi bi-plus-circle text-primary me-2"></i><strong>Created:</strong> {{ application.created_at|date:"M d, Y, P" }}
+                </div>
+                <div>
+                    <i class="bi bi-arrow-repeat text-info me-2"></i><strong>Last Modified:</strong> {{ application.updated_at|date:"M d, Y, P" }}
+                </div>
+                {% if application.applied_at %}
+                <div>
+                    <i class="bi bi-check-circle-fill text-success me-2"></i><strong>Submitted:</strong> {{ application.applied_at|date:"M d, Y, P" }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block title %}Application Tracker - JobAutoApply{% endblock %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-7">
+        <h2 class="fw-bold mb-1">Application Tracker</h2>
+        <p class="text-muted small mb-0">Track pipeline status, review required questions, and manage submission records.</p>
+    </div>
+    <div class="col-md-5 text-md-end mt-3 mt-md-0">
+        <a href="{% url 'jobs:list' %}" class="btn btn-primary-custom btn-sm">
+            <i class="bi bi-search me-1"></i> Discover New Jobs
+        </a>
+    </div>
+</div>
+
+<!-- Status Filter Tabs -->
+<div class="card border-0 shadow-sm rounded-4 p-2 bg-white mb-4">
+    <ul class="nav nav-pills flex-nowrap overflow-auto gap-1" id="statusPills">
+        <li class="nav-item">
+            <a class="nav-link {% if not status_filter %}active bg-primary{% else %}text-muted{% endif %} rounded-pill small py-1 px-3" href="{% url 'applications:list' %}">
+                All <span class="badge bg-light text-dark ms-1">{{ counts.all }}</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if status_filter == 'SAVED' %}active bg-secondary{% else %}text-muted{% endif %} rounded-pill small py-1 px-3" href="{% url 'applications:list' %}?status=SAVED">
+                Saved <span class="badge bg-light text-dark ms-1">{{ counts.saved }}</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if status_filter == 'REVIEW_REQUIRED' %}active bg-warning text-dark{% else %}text-muted{% endif %} rounded-pill small py-1 px-3" href="{% url 'applications:list' %}?status=REVIEW_REQUIRED">
+                Review Required <span class="badge bg-light text-dark ms-1">{{ counts.review }}</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if status_filter == 'SUBMITTED' %}active bg-success{% else %}text-muted{% endif %} rounded-pill small py-1 px-3" href="{% url 'applications:list' %}?status=SUBMITTED">
+                Submitted <span class="badge bg-light text-dark ms-1">{{ counts.submitted }}</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if status_filter == 'INTERVIEW' %}active text-white{% else %}text-muted{% endif %} rounded-pill small py-1 px-3" {% if status_filter == 'INTERVIEW' %}style="background: var(--accent);"{% endif %} href="{% url 'applications:list' %}?status=INTERVIEW">
+                Interview <span class="badge bg-light text-dark ms-1">{{ counts.interview }}</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if status_filter == 'REJECTED' %}active bg-danger{% else %}text-muted{% endif %} rounded-pill small py-1 px-3" href="{% url 'applications:list' %}?status=REJECTED">
+                Rejected <span class="badge bg-light text-dark ms-1">{{ counts.rejected }}</span>
+            </a>
+        </li>
+    </ul>
+</div>
+
+<!-- Applications Table / Cards -->
+<div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+    {% if applications %}
+        <div class="table-responsive">
+            <table class="table align-middle table-hover mb-0">
+                <thead class="table-light text-muted small">
+                    <tr>
+                        <th>Job Opportunity</th>
+                        <th>Status</th>
+                        <th>Automation State</th>
+                        <th>Resume Attached</th>
+                        <th>Last Updated</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for app in applications %}
+                    <tr>
+                        <td>
+                            <div class="fw-bold text-dark">
+                                <a href="{% url 'jobs:detail' app.job.pk %}" class="text-decoration-none text-dark">{{ app.job.title }}</a>
+                            </div>
+                            <div class="small text-muted">
+                                <strong>{{ app.job.company }}</strong> &bull; {{ app.job.location }} &bull; {{ app.job.formatted_salary }}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="app-status-badge badge-{{ app.status|lower }}">
+                                {{ app.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border small">
+                                <i class="bi bi-robot me-1 text-primary"></i>{{ app.get_automation_status_display }}
+                            </span>
+                        </td>
+                        <td class="small text-muted">
+                            {% if app.resume %}
+                                <a href="{% url 'resumes:detail' app.resume.pk %}" class="text-decoration-none text-muted">
+                                    <i class="bi bi-file-earmark-pdf text-danger me-1"></i>{{ app.resume.name }}
+                                </a>
+                            {% else %}
+                                <span class="text-muted">None selected</span>
+                            {% endif %}
+                        </td>
+                        <td class="small text-muted">
+                            {{ app.updated_at|date:"M d, Y" }}
+                        </td>
+                        <td class="text-end">
+                            <div class="d-flex justify-content-end gap-1">
+                                <a href="{% url 'applications:detail' app.pk %}" class="btn btn-sm btn-outline-custom">
+                                    Manage
+                                </a>
+                                {% if app.job.external_url %}
+                                    <a href="{{ app.job.external_url }}" target="_blank" class="btn btn-sm btn-light border" data-bs-toggle="tooltip" title="Open Job URL">
+                                        <i class="bi bi-box-arrow-up-right"></i>
+                                    </a>
+                                {% endif %}
+                                <form method="post" action="{% url 'applications:delete' app.pk %}" class="d-inline" onsubmit="return confirm('Remove this application?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" title="Remove">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-inbox text-muted display-4 mb-3"></i>
+            <h5 class="fw-bold">No applications found in this view</h5>
+            <p class="text-muted small mb-3">Save jobs from the discovery page or track direct applications.</p>
+            <a href="{% url 'jobs:list' %}" class="btn btn-primary-custom btn-sm">Browse Available Jobs</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

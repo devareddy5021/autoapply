@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+
+{% block title %}Job-Seeker Profile - JobAutoApply{% endblock %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-8">
+        <h2 class="fw-bold mb-1">Job-Seeker Profile</h2>
+        <p class="text-muted small mb-0">Your profile preferences directly drive automated matching scores and form-filling data.</p>
+    </div>
+    <div class="col-md-4 text-md-end mt-3 mt-md-0">
+        <a href="{% url 'accounts:profile_edit' %}" class="btn btn-primary-custom d-inline-flex align-items-center gap-2">
+            <i class="bi bi-pencil-square"></i> Edit Preferences
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Left Column: Core Overview & Links -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+            <div class="text-center mb-3">
+                <div class="avatar-circle bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 72px; height: 72px; font-size: 1.8rem; font-weight: 700;">
+                    {{ profile.display_name|first|upper }}
+                </div>
+                <h4 class="fw-bold mb-0">{{ profile.display_name }}</h4>
+                <div class="text-muted small">@{{ user_obj.username }} &bull; {{ user_obj.email }}</div>
+            </div>
+
+            <hr class="my-3 text-muted">
+
+            <div class="mb-3">
+                <div class="small text-muted mb-1"><i class="bi bi-telephone me-2 text-primary"></i>Phone</div>
+                <div class="fw-medium">{{ profile.phone|default:"Not specified" }}</div>
+            </div>
+
+            <div class="mb-3">
+                <div class="small text-muted mb-1"><i class="bi bi-geo-alt me-2 text-danger"></i>Current Location</div>
+                <div class="fw-medium">{{ profile.current_location|default:"Not specified" }}</div>
+            </div>
+
+            <div class="mb-3">
+                <div class="small text-muted mb-1"><i class="bi bi-shield-check me-2 text-success"></i>Work Authorization</div>
+                <div class="fw-medium">{{ profile.work_authorization|default:"Not specified" }}</div>
+            </div>
+
+            <div class="mb-3">
+                <div class="small text-muted mb-1"><i class="bi bi-laptop me-2 text-accent"></i>Work Preference</div>
+                <span class="badge bg-primary-subtle text-primary fw-semibold px-3 py-1 rounded-pill">
+                    {{ profile.get_work_preference_display }}
+                </span>
+            </div>
+
+            <hr class="my-3 text-muted">
+
+            <!-- Online Profiles -->
+            <div class="small text-muted mb-2 fw-semibold">Professional Links</div>
+            <div class="d-flex flex-column gap-2">
+                {% if profile.linkedin_url %}
+                    <a href="{{ profile.linkedin_url }}" target="_blank" class="btn btn-sm btn-light text-start text-dark d-flex align-items-center gap-2 border">
+                        <i class="bi bi-linkedin text-primary"></i> LinkedIn Profile
+                    </a>
+                {% endif %}
+                {% if profile.github_url %}
+                    <a href="{{ profile.github_url }}" target="_blank" class="btn btn-sm btn-light text-start text-dark d-flex align-items-center gap-2 border">
+                        <i class="bi bi-github"></i> GitHub Profile
+                    </a>
+                {% endif %}
+                {% if profile.portfolio_url %}
+                    <a href="{{ profile.portfolio_url }}" target="_blank" class="btn btn-sm btn-light text-start text-dark d-flex align-items-center gap-2 border">
+                        <i class="bi bi-globe text-success"></i> Portfolio Website
+                    </a>
+                {% endif %}
+                {% if not profile.linkedin_url and not profile.github_url and not profile.portfolio_url %}
+                    <span class="small text-muted">No external links added yet.</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Career Preferences & Matching Criteria -->
+    <div class="col-lg-8">
+        <!-- Target Roles & Skills -->
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+            <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                <i class="bi bi-bullseye text-primary"></i> Target Roles & Technical Skills
+            </h5>
+
+            <div class="mb-4">
+                <label class="small text-muted fw-semibold d-block mb-1">Preferred Job Titles</label>
+                <div>
+                    {% for title in profile.preferred_job_titles_list %}
+                        <span class="badge bg-light text-dark border px-3 py-2 rounded-pill me-1 mb-1 fw-semibold">
+                            <i class="bi bi-briefcase me-1 text-primary"></i>{{ title }}
+                        </span>
+                    {% empty %}
+                        <span class="text-muted small">No target job titles specified yet.</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="small text-muted fw-semibold d-block mb-1">Core Skills</label>
+                <div>
+                    {% for skill in profile.skills_list %}
+                        <span class="skill-pill matched px-3 py-1">
+                            <i class="bi bi-check-circle me-1"></i>{{ skill }}
+                        </span>
+                    {% empty %}
+                        <span class="text-muted small">No skills specified yet.</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="mb-0 mt-3 pt-3 border-top">
+                <label class="small text-muted fw-semibold d-block mb-1">Preferred Locations</label>
+                <div>
+                    {% for loc in profile.preferred_locations_list %}
+                        <span class="badge bg-light text-dark border px-3 py-1 rounded-pill me-1 mb-1">
+                            <i class="bi bi-geo me-1 text-danger"></i>{{ loc }}
+                        </span>
+                    {% empty %}
+                        <span class="text-muted small">Flexible / Any location</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Experience, Notice Period & Compensation -->
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+            <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                <i class="bi bi-cash-stack text-success"></i> Experience & Compensation
+            </h5>
+
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="p-3 rounded-3 bg-light border">
+                        <span class="small text-muted d-block">Experience</span>
+                        <span class="fw-bold fs-5">{{ profile.years_of_experience }} Years</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 rounded-3 bg-light border">
+                        <span class="small text-muted d-block">Notice Period</span>
+                        <span class="fw-bold fs-5">
+                            {% if profile.notice_period_days == 0 %}
+                                Immediate Joiner
+                            {% else %}
+                                {{ profile.notice_period_days }} Days
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 rounded-3 bg-light border">
+                        <span class="small text-muted d-block">Expected Salary</span>
+                        <span class="fw-bold fs-5">
+                            {% if profile.preferred_salary_min %}
+                                {{ profile.salary_currency }} {{ profile.preferred_salary_min|floatformat:0 }}
+                                {% if profile.preferred_salary_max %}- {{ profile.preferred_salary_max|floatformat:0 }}{% endif %}
+                            {% else %}
+                                Flexible
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Education & Certifications -->
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+            <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                <i class="bi bi-mortarboard text-secondary"></i> Education & Certifications
+            </h5>
+
+            <div class="mb-3">
+                <label class="small text-muted fw-semibold d-block mb-1">Education</label>
+                <div class="p-3 rounded-3 bg-light border">
+                    {{ profile.education|linebreaks|default:"Not specified" }}
+                </div>
+            </div>
+
+            <div>
+                <label class="small text-muted fw-semibold d-block mb-1">Certifications</label>
+                <div class="p-3 rounded-3 bg-light border">
+                    {{ profile.certifications|linebreaks|default:"Not specified" }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

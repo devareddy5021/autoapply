@@ -1,0 +1,11 @@
+from django.urls import path
+from . import views
+
+app_name = 'applications'
+
+urlpatterns = [
+    path('', views.application_list_view, name='list'),
+    path('track/<int:job_id>/', views.quick_track_job, name='quick_track'),
+    path('<int:pk>/', views.application_detail_view, name='detail'),
+    path('<int:pk>/delete/', views.application_delete_view, name='delete'),
+]

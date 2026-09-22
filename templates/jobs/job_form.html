@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - JobAutoApply{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-3">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm rounded-4 p-4 p-sm-5 bg-white">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h3 class="fw-bold mb-1">{{ title }}</h3>
+                    <p class="text-muted small mb-0">Discovered or manually entered job opportunity</p>
+                </div>
+                <a href="{% url 'jobs:list' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Jobs
+                </a>
+            </div>
+
+            <form method="post" novalidate>
+                {% csrf_token %}
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-7">
+                        <label class="form-label small fw-semibold text-muted">Job Title *</label>
+                        {{ form.title }}
+                        {% if form.title.errors %}<div class="text-danger small">{{ form.title.errors.0 }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label small fw-semibold text-muted">Company *</label>
+                        {{ form.company }}
+                        {% if form.company.errors %}<div class="text-danger small">{{ form.company.errors.0 }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold text-muted">Location</label>
+                        {{ form.location }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold text-muted">Work Mode</label>
+                        {{ form.work_mode }}
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold text-muted">Source Platform</label>
+                        {{ form.source }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold text-muted">Listing Status</label>
+                        {{ form.status }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold text-muted">Required Experience (Yrs)</label>
+                        {{ form.experience_required_years }}
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold text-muted">Min Salary</label>
+                        {{ form.salary_min }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold text-muted">Max Salary</label>
+                        {{ form.salary_max }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold text-muted">Salary Text / Note</label>
+                        {{ form.salary_text }}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-muted">Required Skills (Comma-separated)</label>
+                    {{ form.skills }}
+                    <div class="form-text small">e.g. Python, Django, PostgreSQL, Docker, AWS, React</div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-8">
+                        <label class="form-label small fw-semibold text-muted">Original Job URL</label>
+                        {{ form.external_url }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold text-muted">External Job ID</label>
+                        {{ form.external_job_id }}
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-semibold text-muted">Job Description *</label>
+                    {{ form.description }}
+                    {% if form.description.errors %}<div class="text-danger small">{{ form.description.errors.0 }}</div>{% endif %}
+                </div>
+
+                <div class="text-end">
+                    <a href="{% url 'jobs:list' %}" class="btn btn-light border px-4 me-2">Cancel</a>
+                    <button type="submit" class="btn btn-primary-custom px-5">
+                        <i class="bi bi-check2 me-1"></i> Save Job
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

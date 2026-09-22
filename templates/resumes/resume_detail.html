@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ resume.name }} - Resume Inspection - JobAutoApply{% endblock %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-8">
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <a href="{% url 'resumes:list' %}" class="btn btn-sm btn-light border rounded-circle"><i class="bi bi-arrow-left"></i></a>
+            <h2 class="fw-bold mb-0">{{ resume.name }}</h2>
+            {% if resume.is_default %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1 rounded-pill small">Default</span>
+            {% endif %}
+        </div>
+        <p class="text-muted small mb-0 ms-4 ps-2">Inspection view of extracted plain-text and parsed technical skills.</p>
+    </div>
+    <div class="col-md-4 text-md-end mt-3 mt-md-0">
+        {% if resume.file %}
+            <a href="{{ resume.file.url }}" target="_blank" class="btn btn-outline-danger btn-sm">
+                <i class="bi bi-file-earmark-pdf me-1"></i> View Original PDF
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Skills Extracted -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+            <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                <i class="bi bi-lightning-charge-fill text-warning"></i> Recognized Skills
+            </h5>
+            <p class="text-muted small mb-3">These keywords are automatically cross-referenced when matching jobs against this resume.</p>
+            
+            <div>
+                {% for skill in resume.detected_skills %}
+                    <span class="skill-pill matched mb-2">{{ skill }}</span>
+                {% empty %}
+                    <span class="text-muted small">No recognized skill keywords detected in the document.</span>
+                {% endfor %}
+            </div>
+
+            <hr class="my-3 text-muted">
+
+            <div class="small text-muted">
+                <div><strong>Version:</strong> {{ resume.version }}</div>
+                <div><strong>File Size:</strong> {{ resume.file_size_kb|default:"--" }} KB</div>
+                <div><strong>Uploaded:</strong> {{ resume.upload_date|date:"F d, Y, P" }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Extracted Text Viewer -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                    <i class="bi bi-file-text text-primary"></i> Extracted Resume Text
+                </h5>
+                <span class="badge bg-light text-dark border px-2 py-1 small">Read-Only Parser Output</span>
+            </div>
+
+            {% if resume.extracted_text %}
+                <div class="p-3 rounded-3 bg-light border font-monospace small text-dark" style="max-height: 600px; overflow-y: auto; white-space: pre-wrap; line-height: 1.6;">
+{{ resume.extracted_text }}
+                </div>
+            {% else %}
+                <div class="alert alert-warning border-0 rounded-3 p-4 text-center">
+                    <i class="bi bi-exclamation-triangle-fill fs-3 mb-2 d-block text-warning"></i>
+                    <p class="mb-0 small">No plain text could be extracted from this PDF. It might be scanned/image-based or encrypted.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,1 @@
+"""JobAutoApply Django Configuration Package."""

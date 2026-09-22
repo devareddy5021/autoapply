@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Account - JobAutoApply{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-4">
+    <div class="col-md-7 col-lg-6">
+        <div class="card border-0 shadow-lg rounded-4 p-4 p-sm-5 bg-white">
+            <div class="text-center mb-4">
+                <div class="brand-icon mx-auto mb-3" style="width: 48px; height: 48px; font-size: 1.5rem;">
+                    <i class="bi bi-person-plus"></i>
+                </div>
+                <h3 class="fw-bold mb-1">Create Your Account</h3>
+                <p class="text-muted small">Start managing your applications and matching profile</p>
+            </div>
+
+            <form method="post" novalidate>
+                {% csrf_token %}
+
+                <div class="row g-2 mb-3">
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold text-muted">First Name</label>
+                        {{ form.first_name }}
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold text-muted">Last Name</label>
+                        {{ form.last_name }}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-muted">Username</label>
+                    {{ form.username }}
+                    {% if form.username.errors %}
+                        <div class="text-danger small mt-1">{{ form.username.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-muted">Email Address</label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                        <div class="text-danger small mt-1">{{ form.email.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="row g-2 mb-4">
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold text-muted">Password</label>
+                        {{ form.password }}
+                        {% if form.password.errors %}
+                            <div class="text-danger small mt-1">{{ form.password.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold text-muted">Confirm Password</label>
+                        {{ form.password_confirm }}
+                        {% if form.password_confirm.errors %}
+                            <div class="text-danger small mt-1">{{ form.password_confirm.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="d-grid mb-3">
+                    <button type="submit" class="btn btn-primary-custom btn-lg">
+                        Create Account <i class="bi bi-arrow-right ms-1"></i>
+                    </button>
+                </div>
+            </form>
+
+            <div class="text-center mt-3 pt-3 border-top">
+                <p class="small text-muted mb-0">
+                    Already have an account? <a href="{% url 'accounts:login' %}" class="text-primary fw-semibold text-decoration-none">Sign in here</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

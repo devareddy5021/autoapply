@@ -1,0 +1,94 @@
+<nav class="navbar navbar-expand-lg navbar-custom">
+    <div class="container">
+        <a class="brand-logo" href="{% url 'dashboard:index' %}">
+            <span class="brand-icon"><i class="bi bi-robot"></i></span>
+            <span>JobAutoApply</span>
+        </a>
+        
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <div class="collapse navbar-collapse" id="navbarMain">
+            {% if user.is_authenticated %}
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-4 gap-1">
+                <li class="nav-item">
+                    <a class="nav-link-custom {% if request.resolver_match.app_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard:index' %}">
+                        <i class="bi bi-speedometer2 me-1"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link-custom {% if request.resolver_match.app_name == 'jobs' %}active{% endif %}" href="{% url 'jobs:list' %}">
+                        <i class="bi bi-briefcase me-1"></i> Jobs
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link-custom {% if request.resolver_match.app_name == 'applications' %}active{% endif %}" href="{% url 'applications:list' %}">
+                        <i class="bi bi-send-check me-1"></i> Applications
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link-custom {% if request.resolver_match.app_name == 'resumes' %}active{% endif %}" href="{% url 'resumes:list' %}">
+                        <i class="bi bi-file-earmark-person me-1"></i> Resumes
+                    </a>
+                </li>
+            </ul>
+
+            <div class="d-flex align-items-center gap-2">
+                <a href="{% url 'jobs:create' %}" class="btn btn-sm btn-outline-custom d-none d-md-inline-flex align-items-center gap-1">
+                    <i class="bi bi-plus-lg"></i> Post Job
+                </a>
+                
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-light border dropdown-toggle d-flex align-items-center gap-2 py-1 px-2 rounded-3" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span class="avatar-circle bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 28px; height: 28px; font-size: 0.8rem; font-weight: 600;">
+                            {{ user.first_name|first|default:user.username|first|upper }}
+                        </span>
+                        <span class="fw-semibold small d-none d-sm-inline">{{ user.first_name|default:user.username }}</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2">
+                        <li>
+                            <h6 class="dropdown-header text-truncate" style="max-width: 200px;">Signed in as <strong>{{ user.username }}</strong></h6>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center gap-2" href="{% url 'accounts:profile' %}">
+                                <i class="bi bi-person text-primary"></i> Job-Seeker Profile
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center gap-2" href="{% url 'accounts:profile_edit' %}">
+                                <i class="bi bi-gear text-secondary"></i> Edit Preferences
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center gap-2" href="{% url 'resumes:list' %}">
+                                <i class="bi bi-file-earmark-pdf text-accent"></i> My Resumes
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center gap-2 text-danger" href="{% url 'accounts:logout' %}">
+                                <i class="bi bi-box-arrow-right"></i> Logout
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            {% else %}
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0 gap-2">
+                <li class="nav-item">
+                    <a class="nav-link-custom" href="{% url 'accounts:login' %}">
+                        <i class="bi bi-box-arrow-in-right me-1"></i> Sign In
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="btn btn-primary-custom btn-sm" href="{% url 'accounts:register' %}">
+                        Create Account
+                    </a>
+                </li>
+            </ul>
+            {% endif %}
+        </div>
+    </div>
+</nav>

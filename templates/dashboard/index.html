@@ -1,0 +1,344 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - JobAutoApply{% endblock %}
+
+{% block content %}
+<!-- Welcome & Readiness Banner -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm rounded-4 p-4" style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #4338ca 100%); color: #fff;">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="badge bg-white bg-opacity-25 text-white px-3 py-1 rounded-pill small">
+                            <i class="bi bi-person-badge me-1"></i> Job-Seeker Copilot
+                        </span>
+                        {% if default_resume %}
+                            <span class="badge bg-success bg-opacity-25 text-white px-2 py-1 rounded-pill small">
+                                <i class="bi bi-file-earmark-check me-1"></i> Default Resume: {{ default_resume.name }}
+                            </span>
+                        {% else %}
+                            <span class="badge bg-warning bg-opacity-25 text-white px-2 py-1 rounded-pill small">
+                                <i class="bi bi-exclamation-circle me-1"></i> No Resume Uploaded
+                            </span>
+                        {% endif %}
+                    </div>
+                    <h2 class="fw-bold mb-1">Welcome back, {{ profile.display_name }}!</h2>
+                    <p class="text-white-50 mb-3 small">
+                        {% if profile.preferred_job_titles %}
+                            Targeting: <strong>{{ profile.preferred_job_titles }}</strong>
+                        {% else %}
+                            Configure your target job titles and skills to unlock precision match scoring.
+                        {% endif %}
+                    </p>
+
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{% url 'jobs:list' %}" class="btn btn-sm btn-light text-primary fw-semibold px-3 py-2 rounded-3">
+                            <i class="bi bi-search me-1"></i> Browse Discovered Jobs
+                        </a>
+                        <a href="{% url 'resumes:list' %}" class="btn btn-sm btn-outline-light px-3 py-2 rounded-3">
+                            <i class="bi bi-upload me-1"></i> Manage Resumes ({{ resumes_count }})
+                        </a>
+                        <a href="{% url 'accounts:profile_edit' %}" class="btn btn-sm btn-outline-light px-3 py-2 rounded-3">
+                            <i class="bi bi-sliders me-1"></i> Preferences
+                        </a>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 mt-3 mt-lg-0">
+                    <div class="bg-white bg-opacity-10 rounded-3 p-3 border border-white border-opacity-10">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="small fw-semibold text-white">Profile Readiness</span>
+                            <span class="small fw-bold text-white">{{ readiness_percentage }}%</span>
+                        </div>
+                        <div class="progress" style="height: 8px; background-color: rgba(255,255,255,0.2);">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ readiness_percentage }}%;" aria-valuenow="{{ readiness_percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <div class="small text-white-50 mt-2">
+                            {% if readiness_percentage < 100 %}
+                                Complete skills and upload a default PDF resume for 100% precision.
+                            {% else %}
+                                <i class="bi bi-check-circle-fill text-success me-1"></i> Your profile is fully optimized for automated matching.
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Metrics Overview Grid -->
+<div class="row g-3 mb-4">
+    <!-- Total Jobs -->
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="stat-label">Total Discovered</span>
+                <div class="stat-icon-wrapper stat-icon-primary">
+                    <i class="bi bi-compass"></i>
+                </div>
+            </div>
+            <div class="stat-value">{{ total_jobs_count }}</div>
+            <div class="small text-muted mt-1"><i class="bi bi-clock-history me-1"></i>Across supported sites</div>
+        </div>
+    </div>
+
+    <!-- New Jobs (7 days) -->
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="stat-label">New This Week</span>
+                <div class="stat-icon-wrapper stat-icon-accent">
+                    <i class="bi bi-sparkles"></i>
+                </div>
+            </div>
+            <div class="stat-value text-accent">{{ new_jobs_count }}</div>
+            <div class="small text-muted mt-1">Discovered recently</div>
+        </div>
+    </div>
+
+    <!-- High Matches -->
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="stat-label">High Matches (&ge;65%)</span>
+                <div class="stat-icon-wrapper stat-icon-success">
+                    <i class="bi bi-bullseye"></i>
+                </div>
+            </div>
+            <div class="stat-value text-success">{{ high_match_count }}</div>
+            <div class="small text-muted mt-1">Tailored to your profile</div>
+        </div>
+    </div>
+
+    <!-- Tracked Applications -->
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="stat-label">Applications</span>
+                <div class="stat-icon-wrapper stat-icon-warning">
+                    <i class="bi bi-send-check"></i>
+                </div>
+            </div>
+            <div class="stat-value text-warning">{{ total_applications }}</div>
+            <div class="small text-muted mt-1">{{ submitted_count }} submitted &bull; {{ interview_count }} interviews</div>
+        </div>
+    </div>
+</div>
+
+<!-- Secondary Funnel Counters -->
+<div class="row g-2 mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm rounded-3 p-3 bg-white">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 text-center text-sm-start">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-light text-dark border px-2 py-1"><i class="bi bi-funnel me-1"></i> Application Funnel:</span>
+                </div>
+                <div class="d-flex flex-wrap align-items-center gap-4">
+                    <div>
+                        <span class="small text-muted d-block">Saved Jobs</span>
+                        <span class="fw-bold fs-6">{{ saved_count }}</span>
+                    </div>
+                    <div class="vr d-none d-sm-block"></div>
+                    <div>
+                        <span class="small text-muted d-block">Ready to Apply</span>
+                        <span class="fw-bold fs-6 text-primary">{{ ready_count }}</span>
+                    </div>
+                    <div class="vr d-none d-sm-block"></div>
+                    <div>
+                        <span class="small text-muted d-block">Review Required</span>
+                        <span class="fw-bold fs-6 text-warning">{{ review_required_count }}</span>
+                    </div>
+                    <div class="vr d-none d-sm-block"></div>
+                    <div>
+                        <span class="small text-muted d-block">Submitted</span>
+                        <span class="fw-bold fs-6 text-success">{{ submitted_count }}</span>
+                    </div>
+                    <div class="vr d-none d-sm-block"></div>
+                    <div>
+                        <span class="small text-muted d-block">Interviews</span>
+                        <span class="fw-bold fs-6 text-purple" style="color: var(--accent);">{{ interview_count }}</span>
+                    </div>
+                    <div class="vr d-none d-sm-block"></div>
+                    <div>
+                        <span class="small text-muted d-block">Rejected</span>
+                        <span class="fw-bold fs-6 text-muted">{{ rejected_count }}</span>
+                    </div>
+                </div>
+                <a href="{% url 'applications:list' %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                    View Tracker <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Matching Opportunities Section -->
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h4 class="fw-bold mb-0">Recommended For You</h4>
+            <p class="text-muted small mb-0">Ranked transparently by role, skills, location, work-mode, and salary compatibility.</p>
+        </div>
+        <a href="{% url 'jobs:list' %}?sort=score" class="btn btn-sm btn-outline-custom">
+            View All ({{ total_jobs_count }}) <i class="bi bi-chevron-right ms-1"></i>
+        </a>
+    </div>
+
+    {% if top_matched_jobs %}
+    <div class="row g-3">
+        {% for item in top_matched_jobs %}
+        <div class="col-md-6 col-lg-4">
+            <div class="job-card position-relative">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="job-company text-truncate" style="max-width: 170px;">{{ item.job.company }}</span>
+                    <span class="badge-source source-{{ item.job.source|lower }}">{{ item.job.get_source_display }}</span>
+                </div>
+                
+                <h5 class="job-title">
+                    <a href="{% url 'jobs:detail' item.job.pk %}">{{ item.job.title }}</a>
+                </h5>
+
+                <div class="d-flex align-items-center gap-2 small text-muted mb-3">
+                    <span><i class="bi bi-geo-alt me-1"></i>{{ item.job.location }}</span>
+                    <span>&bull;</span>
+                    <span><i class="bi bi-laptop me-1"></i>{{ item.job.get_work_mode_display }}</span>
+                </div>
+
+                <!-- Match Score Indicator -->
+                <div class="p-2 rounded-3 bg-light border mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="small fw-semibold text-muted">Transparent Match</span>
+                        <span class="score-badge {% if item.score >= 70 %}score-high{% elif item.score >= 45 %}score-medium{% else %}score-low{% endif %} py-0 px-2" style="font-size: 0.75rem;">
+                            {{ item.score }}% Match
+                        </span>
+                    </div>
+                    <div class="match-meter">
+                        <div class="match-meter-fill {% if item.score >= 70 %}bg-success{% elif item.score >= 45 %}bg-warning{% else %}bg-secondary{% endif %}" data-score="{{ item.score }}"></div>
+                    </div>
+                    <div class="small text-muted mt-1" style="font-size: 0.75rem;">
+                        {{ item.match_info.role.details|truncatechars:45 }}
+                    </div>
+                </div>
+
+                <!-- Skills Preview -->
+                <div class="mb-3 flex-grow-1">
+                    <div class="small text-muted mb-1" style="font-size: 0.75rem;">Required Skills:</div>
+                    <div>
+                        {% for skill in item.job.skills_list|slice:":4" %}
+                            <span class="skill-pill {% if skill in item.match_info.skills.matched %}matched{% endif %}">
+                                {% if skill in item.match_info.skills.matched %}<i class="bi bi-check me-1"></i>{% endif %}{{ skill }}
+                            </span>
+                        {% empty %}
+                            <span class="text-muted small">See full description</span>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Compensation & Actions -->
+                <div class="pt-2 border-top d-flex justify-content-between align-items-center mt-auto">
+                    <div class="small fw-semibold text-dark">
+                        {{ item.job.formatted_salary }}
+                    </div>
+
+                    <div class="d-flex gap-1">
+                        {% if item.application %}
+                            <a href="{% url 'applications:detail' item.application.pk %}" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1" style="font-size: 0.75rem;">
+                                <i class="bi bi-check2-circle me-1"></i>{{ item.application.get_status_display }}
+                            </a>
+                        {% else %}
+                            <form method="post" action="{% url 'applications:quick_track' item.job.pk %}" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="status" value="SAVED">
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <button type="submit" class="btn btn-sm btn-light border rounded-circle" data-bs-toggle="tooltip" title="Save Job">
+                                    <i class="bi bi-bookmark"></i>
+                                </button>
+                            </form>
+                            <a href="{% url 'jobs:detail' item.job.pk %}" class="btn btn-sm btn-primary-custom py-1 px-3" style="font-size: 0.8rem;">
+                                Apply <i class="bi bi-arrow-right ms-1"></i>
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="card border-0 shadow-sm rounded-4 p-5 text-center bg-white">
+            <i class="bi bi-inbox text-muted display-4 mb-3"></i>
+            <h5 class="fw-bold">No jobs discovered yet</h5>
+            <p class="text-muted small mb-3">Add job postings manually or load demo sample jobs to explore the matching engine.</p>
+            <div>
+                <a href="{% url 'jobs:create' %}" class="btn btn-primary-custom btn-sm">
+                    <i class="bi bi-plus-lg me-1"></i> Add First Job
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Recent Applications Activity -->
+{% if recent_applications %}
+<div class="row">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0">Recent Application Activity</h5>
+                <a href="{% url 'applications:list' %}" class="small text-primary fw-semibold text-decoration-none">
+                    View Tracker History <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table align-middle table-hover mb-0">
+                    <thead class="table-light text-muted small">
+                        <tr>
+                            <th>Job & Company</th>
+                            <th>Status</th>
+                            <th>Resume Used</th>
+                            <th>Applied Date</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for app in recent_applications %}
+                        <tr>
+                            <td>
+                                <div class="fw-semibold text-dark">{{ app.job.title }}</div>
+                                <div class="small text-muted">{{ app.job.company }} &bull; {{ app.job.location }}</div>
+                            </td>
+                            <td>
+                                <span class="app-status-badge badge-{{ app.status|lower }}">
+                                    {{ app.get_status_display }}
+                                </span>
+                            </td>
+                            <td class="small text-muted">
+                                {% if app.resume %}
+                                    <i class="bi bi-file-earmark-pdf text-danger me-1"></i>{{ app.resume.name }}
+                                {% else %}
+                                    <span class="text-muted">Not selected</span>
+                                {% endif %}
+                            </td>
+                            <td class="small text-muted">
+                                {{ app.applied_at|date:"M d, Y"|default:app.created_at|date:"M d, Y" }}
+                            </td>
+                            <td class="text-end">
+                                <a href="{% url 'applications:detail' app.pk %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 small">
+                                    Manage
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

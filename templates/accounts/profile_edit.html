@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Profile & Preferences - JobAutoApply{% endblock %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-8">
+        <h2 class="fw-bold mb-1">Edit Profile & Matching Preferences</h2>
+        <p class="text-muted small mb-0">Fine-tune your job search criteria, personal info, and compensation expectations.</p>
+    </div>
+    <div class="col-md-4 text-md-end mt-3 mt-md-0">
+        <a href="{% url 'accounts:profile' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i> Back to Profile
+        </a>
+    </div>
+</div>
+
+<form method="post" novalidate>
+    {% csrf_token %}
+
+    <div class="row g-4">
+        <!-- Personal & Contact Information -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+                <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                    <i class="bi bi-person text-primary"></i> Personal Details
+                </h5>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-muted">Full Display Name</label>
+                    {{ profile_form.full_name }}
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold text-muted">First Name</label>
+                        {{ user_form.first_name }}
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold text-muted">Last Name</label>
+                        {{ user_form.last_name }}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-muted">Email Address</label>
+                    {{ user_form.email }}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-muted">Phone Number</label>
+                    {{ profile_form.phone }}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-muted">Current Location</label>
+                    {{ profile_form.current_location }}
+                    <div class="form-text small">e.g. Bengaluru, India or San Francisco, CA</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-muted">Work Authorization</label>
+                    {{ profile_form.work_authorization }}
+                    <div class="form-text small">e.g. Authorized to work in India / US Citizen / Work Visa</div>
+                </div>
+
+                <hr class="my-3 text-muted">
+
+                <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                    <i class="bi bi-link-45deg text-secondary"></i> Professional Links
+                </h6>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-muted">LinkedIn Profile URL</label>
+                    {{ profile_form.linkedin_url }}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-muted">GitHub Profile URL</label>
+                    {{ profile_form.github_url }}
+                </div>
+
+                <div class="mb-0">
+                    <label class="form-label small fw-semibold text-muted">Portfolio / Personal Site URL</label>
+                    {{ profile_form.portfolio_url }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Career Targeting & Matching Rules -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+                <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                    <i class="bi bi-bullseye text-success"></i> Job Targeting & Rules
+                </h5>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-muted">Preferred Job Titles (Comma-separated)</label>
+                    {{ profile_form.preferred_job_titles }}
+                    <div class="form-text small">e.g. Senior Python Developer, Backend Architect, Django Engineer</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-muted">Key Skills (Comma-separated)</label>
+                    {{ profile_form.skills }}
+                    <div class="form-text small">e.g. Python, Django, PostgreSQL, Docker, Redis, Celery, AWS</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-muted">Preferred Job Locations (Comma-separated)</label>
+                    {{ profile_form.preferred_locations }}
+                    <div class="form-text small">e.g. Remote, Bengaluru, Hyderabad, New York</div>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold text-muted">Years of Experience</label>
+                        {{ profile_form.years_of_experience }}
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold text-muted">Notice Period (Days)</label>
+                        {{ profile_form.notice_period_days }}
+                        <div class="form-text small">0 = Immediate Joiner</div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-muted">Work Preference Mode</label>
+                    {{ profile_form.work_preference }}
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-sm-5">
+                        <label class="form-label small fw-semibold text-muted">Min Expected Salary</label>
+                        {{ profile_form.preferred_salary_min }}
+                    </div>
+                    <div class="col-sm-5">
+                        <label class="form-label small fw-semibold text-muted">Max Expected Salary</label>
+                        {{ profile_form.preferred_salary_max }}
+                    </div>
+                    <div class="col-sm-2">
+                        <label class="form-label small fw-semibold text-muted">Currency</label>
+                        {{ profile_form.salary_currency }}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-muted">Education Background</label>
+                    {{ profile_form.education }}
+                </div>
+
+                <div class="mb-0">
+                    <label class="form-label small fw-semibold text-muted">Certifications</label>
+                    {{ profile_form.certifications }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="col-12 text-end">
+            <button type="submit" class="btn btn-primary-custom btn-lg px-5">
+                <i class="bi bi-check2-circle me-1"></i> Save Changes
+            </button>
+        </div>
+    </div>
+</form>
+{% endblock %}
