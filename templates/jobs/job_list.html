@@ -1,122 +1,248 @@
 {% extends 'base.html' %}
 
-{% block title %}Jobs Discovery - JobAutoApply{% endblock %}
+{% block title %}Jobs Dashboard - JobAutoApply{% endblock %}
 
 {% block content %}
+<!-- Page Header -->
 <div class="row mb-4 align-items-center">
     <div class="col-md-7">
-        <h2 class="fw-bold mb-1">Discovered Jobs</h2>
-        <p class="text-muted small mb-0">Showing {{ total_count }} opportunities ranked by transparent compatibility.</p>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 rounded-pill small">
+                <i class="bi bi-briefcase me-1"></i> Job Management
+            </span>
+        </div>
+        <h2 class="fw-bold mb-1 text-dark">Job Search & Dashboard</h2>
+        <p class="text-muted small mb-0">Showing {{ total_count }} active opportunities evaluated by deterministic matching.</p>
     </div>
     <div class="col-md-5 text-md-end mt-3 mt-md-0">
         <a href="{% url 'jobs:create' %}" class="btn btn-primary-custom d-inline-flex align-items-center gap-2">
-            <i class="bi bi-plus-lg"></i> Post Manual Job
+            <i class="bi bi-plus-lg"></i> Add Job Manually
         </a>
     </div>
 </div>
 
-<!-- Search & Filter Controls -->
-<div class="card border-0 shadow-sm rounded-4 p-3 bg-white mb-4">
-    <form method="get" class="row g-2 align-items-center">
-        <!-- Keyword Search -->
-        <div class="col-lg-4 col-md-6">
-            <div class="input-group">
-                <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
-                <input type="text" name="q" value="{{ query }}" class="form-control border-start-0" placeholder="Role, company, skill keywords...">
+<!-- Real Dashboard Statistics Cards (Section 11) -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md">
+        <div class="stat-card">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="stat-label">Total Jobs</span>
+                <div class="stat-icon-wrapper stat-icon-primary">
+                    <i class="bi bi-compass"></i>
+                </div>
+            </div>
+            <div class="stat-value">{{ stats.total_jobs }}</div>
+            <div class="small text-muted mt-1">Active in database</div>
+        </div>
+    </div>
+    <div class="col-6 col-md">
+        <div class="stat-card">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="stat-label">New Jobs</span>
+                <div class="stat-icon-wrapper stat-icon-accent">
+                    <i class="bi bi-sparkles"></i>
+                </div>
+            </div>
+            <div class="stat-value text-accent">{{ stats.new_jobs }}</div>
+            <div class="small text-muted mt-1">Last 7 days</div>
+        </div>
+    </div>
+    <div class="col-6 col-md">
+        <div class="stat-card">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="stat-label">Saved Jobs</span>
+                <div class="stat-icon-wrapper stat-icon-warning">
+                    <i class="bi bi-bookmark-star"></i>
+                </div>
+            </div>
+            <div class="stat-value text-warning">{{ stats.saved_jobs }}</div>
+            <div class="small text-muted mt-1"><a href="{% url 'jobs:saved' %}" class="text-decoration-none">View saved list</a></div>
+        </div>
+    </div>
+    <div class="col-6 col-md">
+        <div class="stat-card">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="stat-label">High Matches</span>
+                <div class="stat-icon-wrapper stat-icon-success">
+                    <i class="bi bi-bullseye"></i>
+                </div>
+            </div>
+            <div class="stat-value text-success">{{ stats.high_match_jobs }}</div>
+            <div class="small text-muted mt-1">&ge; 70% fit score</div>
+        </div>
+    </div>
+    <div class="col-12 col-md">
+        <div class="stat-card">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="stat-label">Applications</span>
+                <div class="stat-icon-wrapper" style="background: rgba(14, 165, 233, 0.12); color: #0ea5e9;">
+                    <i class="bi bi-send-check"></i>
+                </div>
+            </div>
+            <div class="stat-value" style="color: #0ea5e9;">{{ stats.applications_count }}</div>
+            <div class="small text-muted mt-1"><a href="{% url 'applications:list' %}" class="text-decoration-none">View tracker</a></div>
+        </div>
+    </div>
+</div>
+
+<!-- Search & Multi-Filter Card (Sections 12, 13, 14) -->
+<div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+    <form method="get" id="jobFilterForm">
+        <!-- Row 1: Search Box -->
+        <div class="row g-2 mb-3">
+            <div class="col-12">
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="q" value="{{ query }}" class="form-control border-start-0 py-2" placeholder="Search by Job title, Company, Skills, Location, or Description keywords...">
+                    <button class="btn btn-primary-custom px-4" type="submit">
+                        <i class="bi bi-search me-1"></i> Search
+                    </button>
+                </div>
             </div>
         </div>
 
-        <!-- Work Mode Filter -->
-        <div class="col-lg-2 col-sm-6">
-            <select name="work_mode" class="form-select">
-                <option value="">All Work Modes</option>
-                {% for mode_val, mode_label in available_work_modes %}
-                    <option value="{{ mode_val }}" {% if work_mode_filter == mode_val %}selected{% endif %}>{{ mode_label }}</option>
-                {% endfor %}
-            </select>
+        <!-- Row 2: Filter Dropdowns -->
+        <div class="row g-2 align-items-center">
+            <!-- Location -->
+            <div class="col-sm-6 col-md-3 col-lg-2">
+                <label class="form-label small fw-semibold text-muted mb-1">Location</label>
+                <select name="location" class="form-select form-select-sm">
+                    <option value="">All Locations</option>
+                    {% for loc in available_locations %}
+                        <option value="{{ loc }}" {% if selected_location == loc %}selected{% endif %}>{{ loc }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Work Mode -->
+            <div class="col-sm-6 col-md-3 col-lg-2">
+                <label class="form-label small fw-semibold text-muted mb-1">Work Mode</label>
+                <select name="work_mode" class="form-select form-select-sm">
+                    <option value="">All Modes</option>
+                    {% for val, label in work_modes %}
+                        <option value="{{ val }}" {% if selected_work_mode == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Employment Type -->
+            <div class="col-sm-6 col-md-3 col-lg-2">
+                <label class="form-label small fw-semibold text-muted mb-1">Employment Type</label>
+                <select name="employment_type" class="form-select form-select-sm">
+                    <option value="">All Types</option>
+                    {% for val, label in employment_types %}
+                        <option value="{{ val }}" {% if selected_employment_type == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Source -->
+            <div class="col-sm-6 col-md-3 col-lg-2">
+                <label class="form-label small fw-semibold text-muted mb-1">Source</label>
+                <select name="source" class="form-select form-select-sm">
+                    <option value="">All Sources</option>
+                    {% for val, label in sources %}
+                        <option value="{{ val }}" {% if selected_source == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Match Score -->
+            <div class="col-sm-6 col-md-3 col-lg-2">
+                <label class="form-label small fw-semibold text-muted mb-1">Match Score</label>
+                <select name="min_score" class="form-select form-select-sm">
+                    <option value="">Any Match %</option>
+                    <option value="90" {% if selected_min_score == '90' %}selected{% endif %}>90%+ Match</option>
+                    <option value="80" {% if selected_min_score == '80' %}selected{% endif %}>80%+ Match</option>
+                    <option value="70" {% if selected_min_score == '70' %}selected{% endif %}>70%+ Match</option>
+                    <option value="50" {% if selected_min_score == '50' %}selected{% endif %}>50%+ Match</option>
+                </select>
+            </div>
+
+            <!-- Date Filter -->
+            <div class="col-sm-6 col-md-3 col-lg-2">
+                <label class="form-label small fw-semibold text-muted mb-1">Date</label>
+                <select name="date" class="form-select form-select-sm">
+                    <option value="">Any Time</option>
+                    <option value="today" {% if selected_date == 'today' %}selected{% endif %}>Today</option>
+                    <option value="3days" {% if selected_date == '3days' %}selected{% endif %}>Last 3 days</option>
+                    <option value="7days" {% if selected_date == '7days' %}selected{% endif %}>Last 7 days</option>
+                    <option value="30days" {% if selected_date == '30days' %}selected{% endif %}>Last 30 days</option>
+                </select>
+            </div>
         </div>
 
-        <!-- Source Platform Filter -->
-        <div class="col-lg-2 col-sm-6">
-            <select name="source" class="form-select">
-                <option value="">All Sources</option>
-                {% for src_val, src_label in available_sources %}
-                    <option value="{{ src_val }}" {% if source_filter == src_val %}selected{% endif %}>{{ src_label }}</option>
-                {% endfor %}
-            </select>
-        </div>
+        <!-- Row 3: Sorting & Options -->
+        <div class="row g-2 align-items-center mt-2 pt-2 border-top">
+            <div class="col-md-6 d-flex align-items-center gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <label class="small fw-semibold text-muted text-nowrap">Sort By:</label>
+                    <select name="sort" class="form-select form-select-sm" style="width: auto;" onchange="document.getElementById('jobFilterForm').submit();">
+                        <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>Newest</option>
+                        <option value="oldest" {% if sort_by == 'oldest' %}selected{% endif %}>Oldest</option>
+                        <option value="match" {% if sort_by == 'match' %}selected{% endif %}>Highest Match</option>
+                        <option value="company_asc" {% if sort_by == 'company_asc' %}selected{% endif %}>Company A–Z</option>
+                        <option value="company_desc" {% if sort_by == 'company_desc' %}selected{% endif %}>Company Z–A</option>
+                    </select>
+                </div>
 
-        <!-- Minimum Score Filter -->
-        <div class="col-lg-2 col-sm-6">
-            <select name="min_score" class="form-select">
-                <option value="">Any Match %</option>
-                <option value="80" {% if min_score_filter == '80' %}selected{% endif %}>&ge; 80% Match</option>
-                <option value="65" {% if min_score_filter == '65' %}selected{% endif %}>&ge; 65% Match</option>
-                <option value="50" {% if min_score_filter == '50' %}selected{% endif %}>&ge; 50% Match</option>
-            </select>
-        </div>
+                <div class="form-check form-switch small mb-0">
+                    <input class="form-check-input" type="checkbox" name="show_ignored" value="true" id="showIgnoredSwitch" {% if show_ignored %}checked{% endif %} onchange="document.getElementById('jobFilterForm').submit();">
+                    <label class="form-check-label text-muted" for="showIgnoredSwitch">Show ignored jobs</label>
+                </div>
+            </div>
 
-        <!-- Sort Option -->
-        <div class="col-lg-2 col-sm-6">
-            <select name="sort" class="form-select">
-                <option value="score" {% if sort_by == 'score' %}selected{% endif %}>Sort by Match</option>
-                <option value="date" {% if sort_by == 'date' %}selected{% endif %}>Sort by Date</option>
-                <option value="company" {% if sort_by == 'company' %}selected{% endif %}>Sort by Company</option>
-            </select>
-        </div>
-
-        <div class="col-12 text-end mt-2">
-            <a href="{% url 'jobs:list' %}" class="btn btn-sm btn-link text-muted me-2">Reset Filters</a>
-            <button type="submit" class="btn btn-sm btn-primary-custom px-4">
-                <i class="bi bi-funnel me-1"></i> Apply Filters
-            </button>
+            <div class="col-md-6 text-md-end">
+                <a href="{% url 'jobs:list' %}" class="btn btn-sm btn-link text-muted me-2 text-decoration-none">Reset Filters</a>
+                <button type="submit" class="btn btn-sm btn-outline-custom px-3">
+                    <i class="bi bi-funnel me-1"></i> Apply Filters
+                </button>
+            </div>
         </div>
     </form>
 </div>
 
-<!-- Job Cards Grid -->
+<!-- Job Cards Grid (Section 15) -->
 <div class="row g-3">
     {% for item in page_obj %}
     <div class="col-md-6 col-lg-4">
-        <div class="job-card">
+        <div class="job-card h-100 d-flex flex-column {% if item.is_ignored %}opacity-75 border-warning{% endif %}">
+            <!-- Header: Company & Source Badge -->
             <div class="d-flex justify-content-between align-items-start mb-2">
-                <span class="job-company text-truncate" style="max-width: 170px;">{{ item.job.company }}</span>
+                <span class="job-company text-truncate fw-semibold" style="max-width: 170px;">{{ item.job.company_name }}</span>
                 <span class="badge-source source-{{ item.job.source|lower }}">{{ item.job.get_source_display }}</span>
             </div>
 
-            <h5 class="job-title">
-                <a href="{% url 'jobs:detail' item.job.pk %}">{{ item.job.title }}</a>
+            <!-- Title -->
+            <h5 class="job-title mb-2">
+                <a href="{% url 'jobs:detail' item.job.pk %}" class="text-decoration-none text-dark">{{ item.job.title }}</a>
             </h5>
 
-            <div class="d-flex align-items-center gap-2 small text-muted mb-3">
-                <span class="text-truncate" style="max-width: 150px;"><i class="bi bi-geo-alt me-1"></i>{{ item.job.location }}</span>
+            <!-- Location & Work Mode & Employment Type -->
+            <div class="d-flex align-items-center gap-2 small text-muted mb-2 flex-wrap">
+                <span class="text-truncate" style="max-width: 140px;"><i class="bi bi-geo-alt me-1"></i>{{ item.job.location }}</span>
                 <span>&bull;</span>
                 <span><i class="bi bi-laptop me-1"></i>{{ item.job.get_work_mode_display }}</span>
+                <span>&bull;</span>
+                <span class="badge bg-light text-dark border px-2 py-0" style="font-size: 0.72rem;">{{ item.job.get_employment_type_display }}</span>
             </div>
 
-            <!-- Transparent Match Meter -->
-            <div class="p-2 rounded-3 bg-light border mb-3">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <span class="small fw-semibold text-muted">Transparent Match</span>
-                    <span class="score-badge {% if item.score >= 70 %}score-high{% elif item.score >= 45 %}score-medium{% else %}score-low{% endif %} py-0 px-2" style="font-size: 0.75rem;">
-                        {{ item.score }}% Match
-                    </span>
-                </div>
-                <div class="match-meter">
-                    <div class="match-meter-fill {% if item.score >= 70 %}bg-success{% elif item.score >= 45 %}bg-warning{% else %}bg-secondary{% endif %}" data-score="{{ item.score }}"></div>
-                </div>
-                <div class="small text-muted mt-1 text-truncate" style="font-size: 0.75rem;">
-                    {{ item.match_info.role.details }}
-                </div>
-            </div>
-
-            <!-- Required Skills -->
-            <div class="mb-3 flex-grow-1">
-                <div class="small text-muted mb-1" style="font-size: 0.75rem;">Required Skills:</div>
+            <!-- Compensation & Experience -->
+            <div class="d-flex align-items-center justify-content-between small text-muted mb-2 p-2 rounded-2 bg-light">
                 <div>
-                    {% for skill in item.job.skills_list|slice:":4" %}
-                        <span class="skill-pill {% if skill in item.match_info.skills.matched %}matched{% endif %}">
-                            {% if skill in item.match_info.skills.matched %}<i class="bi bi-check me-1"></i>{% endif %}{{ skill }}
+                    <span class="fw-bold text-dark">{{ item.job.formatted_salary }}</span>
+                </div>
+                <div>
+                    <i class="bi bi-hourglass-split me-1 text-muted"></i>{{ item.job.formatted_experience }}
+                </div>
+            </div>
+
+            <!-- Required Skills Pills -->
+            <div class="mb-3 flex-grow-1">
+                <div class="d-flex flex-wrap gap-1">
+                    {% for skill in item.job.skills_list|slice:":5" %}
+                        <span class="skill-pill {% if skill in item.match_info.matched_skills %}matched{% endif %} py-0 px-2" style="font-size: 0.75rem;">
+                            {% if skill in item.match_info.matched_skills %}<i class="bi bi-check me-1"></i>{% endif %}{{ skill }}
                         </span>
                     {% empty %}
                         <span class="text-muted small">See full description</span>
@@ -124,38 +250,50 @@
                 </div>
             </div>
 
-            <!-- Card Bottom Bar -->
-            <div class="pt-2 border-top d-flex justify-content-between align-items-center mt-auto">
-                <div class="small fw-semibold text-dark">
-                    {{ item.job.formatted_salary }}
+            <!-- Match Score Indicator -->
+            <div class="p-2 rounded-3 bg-light border mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="small fw-semibold text-muted">Match Score</span>
+                    <span class="score-badge {% if item.score >= 70 %}score-high{% elif item.score >= 45 %}score-medium{% else %}score-low{% endif %} py-0 px-2" style="font-size: 0.75rem;">
+                        {{ item.score }}% Match
+                    </span>
                 </div>
-
-                <div class="d-flex gap-1">
-                    {% if item.job.external_url %}
-                        <a href="{{ item.job.external_url }}" target="_blank" class="btn btn-sm btn-light border rounded-circle" data-bs-toggle="tooltip" title="Open Job Source URL">
-                            <i class="bi bi-box-arrow-up-right"></i>
-                        </a>
-                    {% endif %}
-
-                    {% if item.application_status %}
-                        <span class="badge bg-light text-dark border px-2 py-1 rounded-pill small">
-                            <i class="bi bi-check-circle-fill text-success me-1"></i>{{ item.application_status }}
-                        </span>
-                    {% else %}
-                        <form method="post" action="{% url 'applications:quick_track' item.job.pk %}" class="d-inline">
-                            {% csrf_token %}
-                            <input type="hidden" name="status" value="SAVED">
-                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                            <button type="submit" class="btn btn-sm btn-light border rounded-circle" data-bs-toggle="tooltip" title="Save Job">
-                                <i class="bi bi-bookmark"></i>
-                            </button>
-                        </form>
-                    {% endif %}
-
-                    <a href="{% url 'jobs:detail' item.job.pk %}" class="btn btn-sm btn-primary-custom py-1 px-3" style="font-size: 0.8rem;">
-                        View
-                    </a>
+                <div class="match-meter">
+                    <div class="match-meter-fill {% if item.score >= 70 %}bg-success{% elif item.score >= 45 %}bg-warning{% else %}bg-secondary{% endif %}" data-score="{{ item.score }}"></div>
                 </div>
+                {% if item.match_info.reasons %}
+                    <div class="small text-muted mt-1 text-truncate" style="font-size: 0.72rem;">
+                        <i class="bi bi-check2 text-success me-1"></i>{{ item.match_info.reasons.0 }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Card Bottom Bar with [View Job] [Save/Saved] [Ignore] buttons -->
+            <div class="pt-2 border-top d-flex justify-content-between align-items-center mt-auto gap-1">
+                <!-- Save Button Toggle -->
+                <form method="post" action="{% url 'jobs:save' item.job.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button type="submit" class="btn btn-sm {% if item.is_saved %}btn-warning text-dark{% else %}btn-outline-secondary{% endif %} py-1 px-2" style="font-size: 0.8rem;" title="{% if item.is_saved %}Click to unsave{% else %}Save job{% endif %}">
+                        <i class="bi bi-bookmark{% if item.is_saved %}-check-fill{% endif %} me-1"></i>
+                        {% if item.is_saved %}Saved{% else %}Save{% endif %}
+                    </button>
+                </form>
+
+                <!-- Ignore Button Toggle -->
+                <form method="post" action="{% url 'jobs:ignore' item.job.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button type="submit" class="btn btn-sm {% if item.is_ignored %}btn-danger text-white{% else %}btn-light border text-muted{% endif %} py-1 px-2" style="font-size: 0.8rem;" title="{% if item.is_ignored %}Unignore job{% else %}Ignore job{% endif %}">
+                        <i class="bi bi-eye-slash me-1"></i>
+                        {% if item.is_ignored %}Ignored{% else %}Ignore{% endif %}
+                    </button>
+                </form>
+
+                <!-- View Job Button -->
+                <a href="{% url 'jobs:detail' item.job.pk %}" class="btn btn-sm btn-primary-custom py-1 px-3" style="font-size: 0.8rem;">
+                    View Job <i class="bi bi-arrow-right ms-1"></i>
+                </a>
             </div>
         </div>
     </div>
@@ -163,7 +301,7 @@
     <div class="col-12">
         <div class="card border-0 shadow-sm rounded-4 p-5 text-center bg-white">
             <i class="bi bi-search text-muted display-4 mb-3"></i>
-            <h5 class="fw-bold">No jobs match your filter criteria</h5>
+            <h5 class="fw-bold">No jobs match your search and filter criteria</h5>
             <p class="text-muted small mb-3">Try adjusting your keywords or clearing the active filters.</p>
             <div>
                 <a href="{% url 'jobs:list' %}" class="btn btn-primary-custom btn-sm">Clear All Filters</a>
@@ -173,16 +311,18 @@
     {% endfor %}
 </div>
 
-<!-- Pagination -->
+<!-- Server-Side Pagination (Section 20) -->
 {% if page_obj.has_other_pages %}
 <div class="row mt-4">
     <div class="col-12 d-flex justify-content-center">
-        <nav aria-label="Page navigation">
-            <ul class="pagination pagination-sm">
+        <nav aria-label="Job pagination">
+            <ul class="pagination pagination-sm mb-0">
                 {% if page_obj.has_previous %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ query }}&work_mode={{ work_mode_filter }}&source={{ source_filter }}&min_score={{ min_score_filter }}&sort={{ sort_by }}">Previous</a>
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ query }}&location={{ selected_location }}&work_mode={{ selected_work_mode }}&employment_type={{ selected_employment_type }}&source={{ selected_source }}&min_score={{ selected_min_score }}&date={{ selected_date }}&show_ignored={{ show_ignored }}&sort={{ sort_by }}">Previous</a>
                     </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">Previous</span></li>
                 {% endif %}
 
                 {% for num in page_obj.paginator.page_range %}
@@ -190,15 +330,17 @@
                         <li class="page-item active"><span class="page-link bg-primary border-primary">{{ num }}</span></li>
                     {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ num }}&q={{ query }}&work_mode={{ work_mode_filter }}&source={{ source_filter }}&min_score={{ min_score_filter }}&sort={{ sort_by }}">{{ num }}</a>
+                            <a class="page-link" href="?page={{ num }}&q={{ query }}&location={{ selected_location }}&work_mode={{ selected_work_mode }}&employment_type={{ selected_employment_type }}&source={{ selected_source }}&min_score={{ selected_min_score }}&date={{ selected_date }}&show_ignored={{ show_ignored }}&sort={{ sort_by }}">{{ num }}</a>
                         </li>
                     {% endif %}
                 {% endfor %}
 
                 {% if page_obj.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ query }}&work_mode={{ work_mode_filter }}&source={{ source_filter }}&min_score={{ min_score_filter }}&sort={{ sort_by }}">Next</a>
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ query }}&location={{ selected_location }}&work_mode={{ selected_work_mode }}&employment_type={{ selected_employment_type }}&source={{ selected_source }}&min_score={{ selected_min_score }}&date={{ selected_date }}&show_ignored={{ show_ignored }}&sort={{ sort_by }}">Next</a>
                     </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">Next</span></li>
                 {% endif %}
             </ul>
         </nav>

@@ -4,12 +4,12 @@
 
 {% block content %}
 <div class="row justify-content-center py-3">
-    <div class="col-lg-8">
+    <div class="col-lg-9">
         <div class="card border-0 shadow-sm rounded-4 p-4 p-sm-5 bg-white">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
                     <h3 class="fw-bold mb-1">{{ title }}</h3>
-                    <p class="text-muted small mb-0">Discovered or manually entered job opportunity</p>
+                    <p class="text-muted small mb-0">Manually add job listing for testing and tracking</p>
                 </div>
                 <a href="{% url 'jobs:list' %}" class="btn btn-outline-secondary btn-sm">
                     <i class="bi bi-arrow-left me-1"></i> Back to Jobs
@@ -19,6 +19,7 @@
             <form method="post" novalidate>
                 {% csrf_token %}
 
+                <!-- Basic Information -->
                 <div class="row g-3 mb-3">
                     <div class="col-md-7">
                         <label class="form-label small fw-semibold text-muted">Job Title *</label>
@@ -26,74 +27,104 @@
                         {% if form.title.errors %}<div class="text-danger small">{{ form.title.errors.0 }}</div>{% endif %}
                     </div>
                     <div class="col-md-5">
-                        <label class="form-label small fw-semibold text-muted">Company *</label>
-                        {{ form.company }}
-                        {% if form.company.errors %}<div class="text-danger small">{{ form.company.errors.0 }}</div>{% endif %}
+                        <label class="form-label small fw-semibold text-muted">Company Name *</label>
+                        {{ form.company_name }}
+                        {% if form.company_name.errors %}<div class="text-danger small">{{ form.company_name.errors.0 }}</div>{% endif %}
                     </div>
                 </div>
 
+                <!-- Location & Modes -->
                 <div class="row g-3 mb-3">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <label class="form-label small fw-semibold text-muted">Location</label>
                         {{ form.location }}
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <label class="form-label small fw-semibold text-muted">Work Mode</label>
                         {{ form.work_mode }}
                     </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold text-muted">Employment Type</label>
+                        {{ form.employment_type }}
+                    </div>
                 </div>
 
+                <!-- Experience & Source -->
                 <div class="row g-3 mb-3">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold text-muted">Min Experience (Yrs)</label>
+                        {{ form.experience_min }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold text-muted">Max Experience (Yrs)</label>
+                        {{ form.experience_max }}
+                    </div>
+                    <div class="col-md-3">
                         <label class="form-label small fw-semibold text-muted">Source Platform</label>
                         {{ form.source }}
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label small fw-semibold text-muted">Listing Status</label>
-                        {{ form.status }}
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label small fw-semibold text-muted">Required Experience (Yrs)</label>
-                        {{ form.experience_required_years }}
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold text-muted">Source Job ID</label>
+                        {{ form.source_job_id }}
                     </div>
                 </div>
 
+                <!-- Compensation -->
                 <div class="row g-3 mb-3">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label small fw-semibold text-muted">Min Salary</label>
                         {{ form.salary_min }}
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label small fw-semibold text-muted">Max Salary</label>
                         {{ form.salary_max }}
                     </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold text-muted">Currency</label>
+                        {{ form.salary_currency }}
+                    </div>
                     <div class="col-md-4">
-                        <label class="form-label small fw-semibold text-muted">Salary Text / Note</label>
+                        <label class="form-label small fw-semibold text-muted">Salary Text / Range</label>
                         {{ form.salary_text }}
                     </div>
                 </div>
 
+                <!-- Skills -->
                 <div class="mb-3">
                     <label class="form-label small fw-semibold text-muted">Required Skills (Comma-separated)</label>
                     {{ form.skills }}
-                    <div class="form-text small">e.g. Python, Django, PostgreSQL, Docker, AWS, React</div>
+                    <div class="form-text small">e.g. Python, Django, PostgreSQL, Docker, AWS, React, PySpark</div>
+                </div>
+
+                <!-- External URL -->
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-muted">Original Application URL</label>
+                    {{ form.external_url }}
+                </div>
+
+                <!-- Narrative Sections -->
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-muted">Job Overview / Description *</label>
+                    {{ form.description }}
+                    {% if form.description.errors %}<div class="text-danger small">{{ form.description.errors.0 }}</div>{% endif %}
                 </div>
 
                 <div class="row g-3 mb-3">
-                    <div class="col-md-8">
-                        <label class="form-label small fw-semibold text-muted">Original Job URL</label>
-                        {{ form.external_url }}
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold text-muted">Key Responsibilities</label>
+                        {{ form.responsibilities }}
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label small fw-semibold text-muted">External Job ID</label>
-                        {{ form.external_job_id }}
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold text-muted">Requirements & Qualifications</label>
+                        {{ form.requirements }}
                     </div>
                 </div>
 
-                <div class="mb-4">
-                    <label class="form-label small fw-semibold text-muted">Job Description *</label>
-                    {{ form.description }}
-                    {% if form.description.errors %}<div class="text-danger small">{{ form.description.errors.0 }}</div>{% endif %}
+                <div class="form-check mb-4">
+                    {{ form.is_active }}
+                    <label class="form-check-label small text-muted" for="{{ form.is_active.id_for_label }}">
+                        Active listing (uncheck to archive)
+                    </label>
                 </div>
 
                 <div class="text-end">

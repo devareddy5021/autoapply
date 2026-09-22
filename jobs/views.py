@@ -2,176 +2,198 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Q
-from .models import Job
+from django.http import JsonResponse, HttpResponseBadRequest
+from django.views.decorators.http import require_POST
+from .models import Job, UserJob
 from .forms import JobForm
-from matching.services import calculate_match_score
-from resumes.models import Resume
-from accounts.models import Profile
+from . import selectors, services
+from applications.models import Application
 
 @login_required
 def job_list_view(request):
-    jobs_qs = Job.objects.all()
-
-    # Search query
+    """
+    Main Job Search & Discovery Dashboard (/jobs/).
+    Integrates live metrics, search query, multi-factor filtering, safe sorting,
+    and server-side pagination (20 per page).
+    """
     query = request.GET.get('q', '').strip()
-    if query:
-        jobs_qs = jobs_qs.filter(
-            Q(title__icontains=query) |
-            Q(company__icontains=query) |
-            Q(location__icontains=query) |
-            Q(skills__icontains=query) |
-            Q(description__icontains=query)
-        )
-
-    # Filters
-    work_mode = request.GET.get('work_mode', '').strip()
-    if work_mode:
-        jobs_qs = jobs_qs.filter(work_mode=work_mode)
-
-    source = request.GET.get('source', '').strip()
-    if source:
-        jobs_qs = jobs_qs.filter(source=source)
-
-    status = request.GET.get('status', 'ACTIVE').strip()
-    if status and status != 'ALL':
-        jobs_qs = jobs_qs.filter(status=status)
-
     location = request.GET.get('location', '').strip()
-    if location:
-        jobs_qs = jobs_qs.filter(location__icontains=location)
+    work_mode = request.GET.get('work_mode', '').strip()
+    employment_type = request.GET.get('employment_type', '').strip()
+    source = request.GET.get('source', '').strip()
+    min_score_str = request.GET.get('min_score', '').strip()
+    min_score = int(min_score_str) if min_score_str.isdigit() else None
+    date_range = request.GET.get('date', '').strip()
+    show_ignored = request.GET.get('show_ignored', '').lower() in ('true', '1', 'on')
+    sort_by = request.GET.get('sort', 'newest').strip()
 
-    # Fetch user profile and default resume for matching
-    profile, _ = Profile.objects.get_or_create(user=request.user)
-    default_resume = Resume.objects.filter(user=request.user, is_default=True).first()
+    # Query items using selector
+    items = selectors.filter_and_search_jobs(
+        user=request.user,
+        query=query,
+        location=location,
+        work_mode=work_mode,
+        employment_type=employment_type,
+        source=source,
+        min_score=min_score,
+        date_range=date_range,
+        show_ignored=show_ignored,
+        sort_by=sort_by
+    )
 
-    # User's tracked applications lookup
-    from applications.models import Application
-    user_applications = {
-        app.job_id: app.status
-        for app in Application.objects.filter(user=request.user)
-    }
-
-    # Annotate jobs with match scores
-    jobs_with_scores = []
-    min_score_filter = request.GET.get('min_score', '').strip()
-    min_score_val = int(min_score_filter) if min_score_filter.isdigit() else 0
-
-    for job in jobs_qs:
-        match_info = calculate_match_score(job, profile, default_resume)
-        if match_info['total_score'] >= min_score_val:
-            jobs_with_scores.append({
-                'job': job,
-                'score': match_info['total_score'],
-                'match_info': match_info,
-                'application_status': user_applications.get(job.id),
-            })
-
-    # Sort option
-    sort_by = request.GET.get('sort', 'score')
-    if sort_by == 'score':
-        jobs_with_scores.sort(key=lambda x: x['score'], reverse=True)
-    elif sort_by == 'date':
-        jobs_with_scores.sort(key=lambda x: x['job'].discovered_at, reverse=True)
-    elif sort_by == 'company':
-        jobs_with_scores.sort(key=lambda x: x['job'].company.lower())
-
-    paginator = Paginator(jobs_with_scores, 12)
+    # Server-side pagination: exactly 20 jobs per page as requested
+    paginator = Paginator(items, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    # Distinct values for filter dropdowns
-    available_sources = Job.Source.choices
-    available_work_modes = Job.WorkMode.choices
+    # Real database statistics
+    stats = selectors.get_dashboard_statistics(request.user)
+    available_locations = selectors.get_distinct_locations()
 
     return render(request, 'jobs/job_list.html', {
         'page_obj': page_obj,
+        'total_count': len(items),
+        'stats': stats,
+        'available_locations': available_locations,
+        'work_modes': Job.WorkMode.choices,
+        'employment_types': Job.EmploymentType.choices,
+        'sources': Job.Source.choices,
+        # Active filter values
         'query': query,
-        'work_mode_filter': work_mode,
-        'source_filter': source,
-        'status_filter': status,
-        'min_score_filter': min_score_filter,
+        'selected_location': location,
+        'selected_work_mode': work_mode,
+        'selected_employment_type': employment_type,
+        'selected_source': source,
+        'selected_min_score': min_score_str,
+        'selected_date': date_range,
+        'show_ignored': show_ignored,
         'sort_by': sort_by,
-        'available_sources': available_sources,
-        'available_work_modes': available_work_modes,
-        'total_count': len(jobs_with_scores),
     })
 
 
 @login_required
 def job_detail_view(request, pk):
+    """
+    Detailed job view (/jobs/<id>/).
+    Displays complete specifications, explainable match score with reasons & missing skills,
+    and actions: Save, Ignore, Open Original, and Prepare Application (disabled placeholder).
+    """
     job = get_object_or_404(Job, pk=pk)
-    profile, _ = Profile.objects.get_or_create(user=request.user)
-    default_resume = Resume.objects.filter(user=request.user, is_default=True).first()
 
-    match_breakdown = calculate_match_score(job, profile, default_resume)
+    # Sync and get user-specific match info & UserJob state
+    user_job = services.calculate_and_sync_user_job_match(request.user, job)
 
-    from applications.models import Application
+    match_info = {
+        'score': user_job.match_score,
+        'total_score': user_job.match_score,
+        'reasons': user_job.match_reasons or [],
+        'missing_skills': user_job.missing_skills or [],
+    }
+
     application = Application.objects.filter(user=request.user, job=job).first()
-    user_resumes = Resume.objects.filter(user=request.user)
 
     return render(request, 'jobs/job_detail.html', {
         'job': job,
-        'match': match_breakdown,
+        'user_job': user_job,
+        'match': match_info,
+        'is_saved': user_job.is_saved,
+        'is_ignored': user_job.is_ignored,
         'application': application,
-        'user_resumes': user_resumes,
+    })
+
+
+@login_required
+@require_POST
+def job_save_toggle_view(request, pk):
+    """Toggles is_saved status for a job."""
+    user_job, is_saved = services.toggle_save_job(request.user, pk)
+    if not user_job:
+        return JsonResponse({'error': 'Job not found'}, status=404)
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.POST.get('format') == 'json':
+        return JsonResponse({
+            'success': True,
+            'is_saved': is_saved,
+            'message': 'Job saved to your list' if is_saved else 'Job removed from saved list'
+        })
+
+    msg = "Job saved to your saved jobs list." if is_saved else "Job removed from your saved list."
+    messages.success(request, msg)
+    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'jobs:list'
+    return redirect(next_url)
+
+
+@login_required
+@require_POST
+def job_ignore_toggle_view(request, pk):
+    """Toggles is_ignored status for a job."""
+    user_job, is_ignored = services.toggle_ignore_job(request.user, pk)
+    if not user_job:
+        return JsonResponse({'error': 'Job not found'}, status=404)
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.POST.get('format') == 'json':
+        return JsonResponse({
+            'success': True,
+            'is_ignored': is_ignored,
+            'message': 'Job ignored' if is_ignored else 'Job restored'
+        })
+
+    msg = "Job has been ignored and hidden from your default view." if is_ignored else "Job is no longer ignored."
+    messages.info(request, msg)
+    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'jobs:list'
+    return redirect(next_url)
+
+
+@login_required
+def saved_jobs_view(request):
+    """
+    Dedicated view for Saved Jobs (/jobs/saved/).
+    Shows only jobs saved by the authenticated user with options to view, unsave, or ignore.
+    """
+    saved_items = selectors.get_saved_jobs_for_user(request.user)
+
+    paginator = Paginator(saved_items, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, 'jobs/saved_jobs.html', {
+        'page_obj': page_obj,
+        'total_count': len(saved_items),
     })
 
 
 @login_required
 def job_create_view(request):
+    """
+    Manual job creation view (/jobs/create/) for testing and manual additions.
+    Checks for duplicates, calculates user match, creates UserJob, and redirects to job details.
+    """
     if request.method == 'POST':
         form = JobForm(request.POST)
         if form.is_valid():
-            title = form.cleaned_data.get('title')
-            company = form.cleaned_data.get('company')
-            location = form.cleaned_data.get('location')
-            ext_url = form.cleaned_data.get('external_url')
-            ext_id = form.cleaned_data.get('external_job_id')
-
-            duplicate = Job.find_duplicate(
-                company=company,
-                title=title,
-                location=location,
-                external_url=ext_url,
-                external_job_id=ext_id
-            )
-            if duplicate:
-                messages.warning(request, f"Note: A matching job listing at '{duplicate.company}' already exists (ID #{duplicate.id}).")
-
-            job = form.save()
-            messages.success(request, f"Job '{job.title}' at {job.company} added successfully!")
+            job, is_dup, user_job = services.create_manual_job(request.user, form.cleaned_data)
+            if is_dup:
+                messages.warning(
+                    request,
+                    f"Note: A matching job listing at '{job.company_name}' already exists in the database (ID #{job.id})."
+                )
+            else:
+                messages.success(request, f"Job '{job.title}' at {job.company_name} was successfully created!")
             return redirect('jobs:detail', pk=job.pk)
+        else:
+            messages.error(request, "Please correct the errors in the form below.")
     else:
         form = JobForm()
 
     return render(request, 'jobs/job_form.html', {
         'form': form,
-        'title': 'Post / Add Job Listing',
-    })
-
-
-@login_required
-def job_update_view(request, pk):
-    job = get_object_or_404(Job, pk=pk)
-    if request.method == 'POST':
-        form = JobForm(request.POST, instance=job)
-        if form.is_valid():
-            form.save()
-            messages.success(request, f"Job '{job.title}' updated successfully.")
-            return redirect('jobs:detail', pk=job.pk)
-    else:
-        form = JobForm(instance=job)
-
-    return render(request, 'jobs/job_form.html', {
-        'form': form,
-        'job': job,
-        'title': f'Edit Job: {job.title}',
+        'title': 'Add Job Manually',
     })
 
 
 @login_required
 def job_delete_view(request, pk):
+    """Deletes a job listing."""
     job = get_object_or_404(Job, pk=pk)
     title = job.title
     job.delete()

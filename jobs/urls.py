@@ -5,8 +5,10 @@ app_name = 'jobs'
 
 urlpatterns = [
     path('', views.job_list_view, name='list'),
-    path('add/', views.job_create_view, name='create'),
+    path('create/', views.job_create_view, name='create'),
+    path('saved/', views.saved_jobs_view, name='saved'),
     path('<int:pk>/', views.job_detail_view, name='detail'),
-    path('<int:pk>/edit/', views.job_update_view, name='update'),
+    path('<int:pk>/save/', views.job_save_toggle_view, name='save'),
+    path('<int:pk>/ignore/', views.job_ignore_toggle_view, name='ignore'),
     path('<int:pk>/delete/', views.job_delete_view, name='delete'),
 ]

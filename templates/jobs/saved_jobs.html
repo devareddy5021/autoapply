@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+
+{% block title %}Saved Jobs - JobAutoApply{% endblock %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-7">
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <a href="{% url 'jobs:list' %}" class="btn btn-sm btn-light border rounded-circle" title="Back to All Jobs">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1 rounded-pill small">
+                <i class="bi bi-bookmark-star-fill me-1"></i> Saved Opportunities
+            </span>
+        </div>
+        <h2 class="fw-bold mb-1 text-dark">Saved Jobs</h2>
+        <p class="text-muted small mb-0">You have saved {{ total_count }} opportunities to revisit or prepare applications.</p>
+    </div>
+    <div class="col-md-5 text-md-end mt-3 mt-md-0">
+        <a href="{% url 'jobs:list' %}" class="btn btn-outline-custom btn-sm">
+            <i class="bi bi-search me-1"></i> Browse More Jobs
+        </a>
+    </div>
+</div>
+
+<!-- Saved Jobs List -->
+<div class="row g-3">
+    {% for item in page_obj %}
+    <div class="col-md-6 col-lg-4">
+        <div class="job-card h-100 d-flex flex-column">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="job-company text-truncate fw-semibold" style="max-width: 170px;">{{ item.job.company_name }}</span>
+                <span class="badge-source source-{{ item.job.source|lower }}">{{ item.job.get_source_display }}</span>
+            </div>
+
+            <!-- Title -->
+            <h5 class="job-title mb-2">
+                <a href="{% url 'jobs:detail' item.job.pk %}" class="text-decoration-none text-dark">{{ item.job.title }}</a>
+            </h5>
+
+            <!-- Meta details -->
+            <div class="d-flex align-items-center gap-2 small text-muted mb-2 flex-wrap">
+                <span><i class="bi bi-geo-alt me-1"></i>{{ item.job.location }}</span>
+                <span>&bull;</span>
+                <span><i class="bi bi-laptop me-1"></i>{{ item.job.get_work_mode_display }}</span>
+                <span>&bull;</span>
+                <span class="badge bg-light text-dark border px-2 py-0" style="font-size: 0.72rem;">{{ item.job.get_employment_type_display }}</span>
+            </div>
+
+            <!-- Salary & Experience -->
+            <div class="d-flex align-items-center justify-content-between small text-muted mb-2 p-2 rounded-2 bg-light">
+                <span class="fw-bold text-dark">{{ item.job.formatted_salary }}</span>
+                <span><i class="bi bi-hourglass-split me-1 text-muted"></i>{{ item.job.formatted_experience }}</span>
+            </div>
+
+            <!-- Skills -->
+            <div class="mb-3 flex-grow-1">
+                <div class="d-flex flex-wrap gap-1">
+                    {% for skill in item.job.skills_list|slice:":4" %}
+                        <span class="skill-pill py-0 px-2" style="font-size: 0.75rem;">{{ skill }}</span>
+                    {% empty %}
+                        <span class="text-muted small">See full description</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Match Score Indicator -->
+            <div class="p-2 rounded-3 bg-light border mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="small fw-semibold text-muted">Match Score</span>
+                    <span class="score-badge {% if item.score >= 70 %}score-high{% elif item.score >= 45 %}score-medium{% else %}score-low{% endif %} py-0 px-2" style="font-size: 0.75rem;">
+                        {{ item.score }}% Match
+                    </span>
+                </div>
+                <div class="match-meter">
+                    <div class="match-meter-fill {% if item.score >= 70 %}bg-success{% elif item.score >= 45 %}bg-warning{% else %}bg-secondary{% endif %}" data-score="{{ item.score }}"></div>
+                </div>
+            </div>
+
+            <!-- Actions: [View Job] [Unsave] [Ignore] -->
+            <div class="pt-2 border-top d-flex justify-content-between align-items-center mt-auto gap-1">
+                <!-- Unsave Form -->
+                <form method="post" action="{% url 'jobs:save' item.job.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button type="submit" class="btn btn-sm btn-outline-warning text-dark py-1 px-2" style="font-size: 0.8rem;" title="Remove from saved jobs">
+                        <i class="bi bi-bookmark-x me-1"></i> Unsave
+                    </button>
+                </form>
+
+                <!-- Ignore Form -->
+                <form method="post" action="{% url 'jobs:ignore' item.job.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button type="submit" class="btn btn-sm btn-light border text-muted py-1 px-2" style="font-size: 0.8rem;" title="Ignore this job">
+                        <i class="bi bi-eye-slash me-1"></i> Ignore
+                    </button>
+                </form>
+
+                <!-- View Job -->
+                <a href="{% url 'jobs:detail' item.job.pk %}" class="btn btn-sm btn-primary-custom py-1 px-3" style="font-size: 0.8rem;">
+                    View Job <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="card border-0 shadow-sm rounded-4 p-5 text-center bg-white">
+            <i class="bi bi-bookmark-heart text-muted display-4 mb-3"></i>
+            <h5 class="fw-bold">No saved jobs yet</h5>
+            <p class="text-muted small mb-3">When browsing jobs, click "Save" on any card to bookmark opportunities here.</p>
+            <div>
+                <a href="{% url 'jobs:list' %}" class="btn btn-primary-custom btn-sm">
+                    <i class="bi bi-search me-1"></i> Explore Jobs
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<div class="row mt-4">
+    <div class="col-12 d-flex justify-content-center">
+        <nav aria-label="Saved jobs pagination">
+            <ul class="pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+                {% endif %}
+                {% for num in page_obj.paginator.page_range %}
+                    <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                {% endfor %}
+                {% if page_obj.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -11,15 +11,20 @@
         
         <div class="collapse navbar-collapse" id="navbarMain">
             {% if user.is_authenticated %}
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-4 gap-1">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3 gap-1">
                 <li class="nav-item">
                     <a class="nav-link-custom {% if request.resolver_match.app_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard:index' %}">
                         <i class="bi bi-speedometer2 me-1"></i> Dashboard
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link-custom {% if request.resolver_match.app_name == 'jobs' %}active{% endif %}" href="{% url 'jobs:list' %}">
+                    <a class="nav-link-custom {% if request.resolver_match.app_name == 'jobs' and request.resolver_match.url_name != 'saved' %}active{% endif %}" href="{% url 'jobs:list' %}">
                         <i class="bi bi-briefcase me-1"></i> Jobs
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link-custom {% if request.resolver_match.url_name == 'saved' %}active{% endif %}" href="{% url 'jobs:saved' %}">
+                        <i class="bi bi-bookmark-star me-1"></i> Saved Jobs
                     </a>
                 </li>
                 <li class="nav-item">
@@ -29,13 +34,23 @@
                 </li>
                 <li class="nav-item">
                     <a class="nav-link-custom {% if request.resolver_match.app_name == 'resumes' %}active{% endif %}" href="{% url 'resumes:list' %}">
-                        <i class="bi bi-file-earmark-person me-1"></i> Resumes
+                        <i class="bi bi-file-earmark-person me-1"></i> Resume
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link-custom {% if request.resolver_match.url_name == 'profile' %}active{% endif %}" href="{% url 'accounts:profile' %}">
+                        <i class="bi bi-person me-1"></i> Profile
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link-custom {% if request.resolver_match.url_name == 'profile_edit' %}active{% endif %}" href="{% url 'accounts:profile_edit' %}">
+                        <i class="bi bi-gear me-1"></i> Settings
                     </a>
                 </li>
             </ul>
 
             <div class="d-flex align-items-center gap-2">
-                <a href="{% url 'jobs:create' %}" class="btn btn-sm btn-outline-custom d-none d-md-inline-flex align-items-center gap-1">
+                <a href="{% url 'jobs:create' %}" class="btn btn-sm btn-outline-custom d-none d-xl-inline-flex align-items-center gap-1">
                     <i class="bi bi-plus-lg"></i> Post Job
                 </a>
                 
@@ -53,12 +68,17 @@
                         <li><hr class="dropdown-divider"></li>
                         <li>
                             <a class="dropdown-item d-flex align-items-center gap-2" href="{% url 'accounts:profile' %}">
-                                <i class="bi bi-person text-primary"></i> Job-Seeker Profile
+                                <i class="bi bi-person text-primary"></i> Profile
                             </a>
                         </li>
                         <li>
                             <a class="dropdown-item d-flex align-items-center gap-2" href="{% url 'accounts:profile_edit' %}">
-                                <i class="bi bi-gear text-secondary"></i> Edit Preferences
+                                <i class="bi bi-gear text-secondary"></i> Settings
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center gap-2" href="{% url 'jobs:saved' %}">
+                                <i class="bi bi-bookmark-star text-warning"></i> Saved Jobs
                             </a>
                         </li>
                         <li>

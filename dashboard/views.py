@@ -11,8 +11,8 @@ from matching.services import calculate_match_score
 def index_view(request):
     if not request.user.is_authenticated:
         # Show public landing overview with product features
-        total_public_jobs = Job.objects.filter(status=Job.Status.ACTIVE).count()
-        recent_public_jobs = Job.objects.filter(status=Job.Status.ACTIVE)[:6]
+        total_public_jobs = Job.objects.filter(is_active=True).count()
+        recent_public_jobs = Job.objects.filter(is_active=True)[:6]
         return render(request, 'dashboard/landing.html', {
             'total_jobs': total_public_jobs,
             'recent_jobs': recent_public_jobs,
@@ -27,7 +27,7 @@ def index_view(request):
     seven_days_ago = timezone.now() - timedelta(days=7)
 
     # Job metrics
-    all_jobs = Job.objects.filter(status=Job.Status.ACTIVE)
+    all_jobs = Job.objects.filter(is_active=True)
     total_jobs_count = all_jobs.count()
     new_jobs_count = all_jobs.filter(discovered_at__gte=seven_days_ago).count()
 
@@ -48,7 +48,7 @@ def index_view(request):
 
     for job in all_jobs:
         match_info = calculate_match_score(job, profile, default_resume)
-        score = match_info['total_score']
+        score = match_info['score']
         if score >= 65:
             high_match_count += 1
         scored_jobs.append({
