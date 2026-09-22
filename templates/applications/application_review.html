@@ -1,0 +1,503 @@
+{% extends 'base.html' %}
+{% load application_extras %}
+
+{% block title %}Review Application: {{ job.title }} at {{ job.company }} - JobAutoApply{% endblock %}
+
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <a href="{% url 'applications:list' %}" class="btn btn-sm btn-light border rounded-circle shadow-sm" title="Back to Applications">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <span id="app-status-badge" class="badge {{ application.status_badge_class }} px-3 py-2 fs-7">
+                    {{ application.get_status_display }}
+                </span>
+                <span id="auto-status-badge" class="badge {{ application.automation_badge_class }} px-3 py-2 fs-7">
+                    <i class="bi bi-robot me-1"></i><span id="auto-status-text">{{ application.get_automation_status_display }}</span>
+                </span>
+                {% if application.status == 'IN_PROGRESS' or application.status == 'QUEUED' %}
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-2 px-3">
+                        <span class="spinner-grow spinner-grow-sm me-1" role="status" aria-hidden="true"></span>
+                        Automation Active
+                    </span>
+                {% endif %}
+            </div>
+            <h2 class="fw-bold text-dark mb-1">{{ job.title }}</h2>
+            <div class="text-muted small">
+                <span class="fw-semibold text-dark"><i class="bi bi-building me-1"></i>{{ job.company }}</span> &bull; 
+                <i class="bi bi-geo-alt me-1"></i>{{ job.location|default:"Remote / Flexible" }} &bull;
+                <i class="bi bi-calendar3 me-1"></i>Created {{ application.created_at|date:"M d, Y" }}
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            {% if job.external_url %}
+                <a href="{{ job.external_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-sm">
+                    <i class="bi bi-box-arrow-up-right me-1"></i> Open External Job
+                </a>
+            {% endif %}
+
+            {% if application.status != 'SUBMITTED' %}
+                <button type="button" class="btn btn-gradient-accent rounded-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#confirmSubmitModal">
+                    <i class="bi bi-send-check-fill me-1"></i> Confirm & Submit
+                </button>
+            {% else %}
+                <span class="badge bg-success py-2 px-3 fs-6 rounded-pill">
+                    <i class="bi bi-check-circle-fill me-1"></i> Application Submitted
+                </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Live Step Progress Tracker -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white overflow-hidden">
+        <div class="card-body p-4">
+            <h6 class="fw-bold text-muted small text-uppercase mb-3">
+                <i class="bi bi-diagram-3-fill text-primary me-2"></i>Automation Pipeline Status
+            </h6>
+
+            <div class="row text-center g-2 position-relative" id="pipeline-steps">
+                <div class="col" id="step-queued">
+                    <div class="step-icon mb-2 rounded-circle mx-auto d-flex align-items-center justify-content-center border {% if application.automation_status != 'IDLE' %}bg-primary text-white{% else %}bg-light text-muted{% endif %}" style="width: 42px; height: 42px;">
+                        <i class="bi bi-cpu fs-5"></i>
+                    </div>
+                    <div class="small fw-semibold">1. Queued</div>
+                    <div class="text-muted extra-small">Browser Launched</div>
+                </div>
+
+                <div class="col" id="step-detected">
+                    <div class="step-icon mb-2 rounded-circle mx-auto d-flex align-items-center justify-content-center border {% if application.automation_status in 'APPLICATION_DETECTED,FILLING_FORM,WAITING_FOR_REVIEW,SUBMITTING,SUBMITTED' %}bg-primary text-white{% else %}bg-light text-muted{% endif %}" style="width: 42px; height: 42px;">
+                        <i class="bi bi-window-sidebar fs-5"></i>
+                    </div>
+                    <div class="small fw-semibold">2. Form Detected</div>
+                    <div class="text-muted extra-small">Application Found</div>
+                </div>
+
+                <div class="col" id="step-filled">
+                    <div class="step-icon mb-2 rounded-circle mx-auto d-flex align-items-center justify-content-center border {% if application.automation_status in 'FILLING_FORM,WAITING_FOR_REVIEW,SUBMITTING,SUBMITTED' %}bg-primary text-white{% else %}bg-light text-muted{% endif %}" style="width: 42px; height: 42px;">
+                        <i class="bi bi-pencil-square fs-5"></i>
+                    </div>
+                    <div class="small fw-semibold">3. Fields Filled</div>
+                    <div class="text-muted extra-small">Profile & Resume</div>
+                </div>
+
+                <div class="col" id="step-review">
+                    <div class="step-icon mb-2 rounded-circle mx-auto d-flex align-items-center justify-content-center border {% if application.status == 'REVIEW_REQUIRED' or application.automation_status == 'WAITING_FOR_REVIEW' %}bg-warning text-dark border-warning shadow{% elif application.automation_status in 'SUBMITTING,SUBMITTED' %}bg-success text-white{% else %}bg-light text-muted{% endif %}" style="width: 42px; height: 42px;">
+                        <i class="bi bi-shield-check fs-5"></i>
+                    </div>
+                    <div class="small fw-semibold">4. Human Review</div>
+                    <div class="text-muted extra-small">Candidate Approval</div>
+                </div>
+
+                <div class="col" id="step-submitted">
+                    <div class="step-icon mb-2 rounded-circle mx-auto d-flex align-items-center justify-content-center border {% if application.status == 'SUBMITTED' %}bg-success text-white border-success shadow{% else %}bg-light text-muted{% endif %}" style="width: 42px; height: 42px;">
+                        <i class="bi bi-check2-circle fs-5"></i>
+                    </div>
+                    <div class="small fw-semibold">5. Submitted</div>
+                    <div class="text-muted extra-small">Final Portal Submission</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Alert if failed -->
+    <div id="error-alert-box" class="alert alert-danger border-0 rounded-4 shadow-sm mb-4 {% if not application.error_message %}d-none{% endif %}">
+        <div class="d-flex align-items-start gap-3">
+            <i class="bi bi-exclamation-triangle-fill fs-4 text-danger mt-1"></i>
+            <div class="flex-grow-1">
+                <h6 class="fw-bold mb-1">Automation Attention Required</h6>
+                <p id="error-alert-msg" class="mb-2 small">{{ application.error_message }}</p>
+                <a href="{% url 'applications:prepare' application.job.pk %}" class="btn btn-danger btn-sm rounded-pill px-3">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Retry Automation
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="row g-4">
+        <!-- Left Column: Filled Fields & Unknown Questions -->
+        <div class="col-lg-7">
+            <!-- Unknown Questions Card (Candidate Input Required) -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white overflow-hidden">
+                <div class="card-header bg-white border-bottom p-4 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="fw-bold mb-1 d-flex align-items-center gap-2">
+                            <i class="bi bi-question-circle-fill text-warning"></i> Detected Questions
+                        </h5>
+                        <p class="text-muted small mb-0">Custom or unknown portal questions requiring candidate review.</p>
+                    </div>
+                    <span id="questions-badge" class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-3 py-2">
+                        {{ detected_questions|length }} Required
+                    </span>
+                </div>
+
+                <div class="card-body p-4">
+                    {% if detected_questions %}
+                        <form method="post" action="{% url 'applications:review' application.pk %}">
+                            {% csrf_token %}
+                            <div class="alert alert-warning border-0 rounded-3 p-3 small mb-4 d-flex gap-2">
+                                <i class="bi bi-shield-exclamation fs-5"></i>
+                                <div>
+                                    <strong>Human-in-the-Loop Safe Mode:</strong> The automation agent paused here because these questions cannot be safely answered from your profile. Review and customize your answers below before confirming submission.
+                                </div>
+                            </div>
+
+                            <div class="d-flex flex-column gap-3 mb-4">
+                                {% for q in detected_questions %}
+                                    <div class="p-3 border rounded-3 bg-light-subtle">
+                                        <label class="form-label fw-semibold small text-dark d-flex justify-content-between">
+                                            <span>
+                                                {{ q.question_text }}
+                                                {% if q.is_required %}<span class="text-danger">*</span>{% endif %}
+                                            </span>
+                                            <span class="badge bg-secondary-subtle text-secondary extra-small">{{ q.input_type }}</span>
+                                        </label>
+
+                                        {% if q.options %}
+                                            <select name="question_{{ q.field_name }}" class="form-select form-select-sm">
+                                                <option value="">-- Choose Option --</option>
+                                                {% for opt in q.options %}
+                                                    <option value="{{ opt }}" {% if answers|dict_lookup:q.field_name == opt or q.current_value == opt %}selected{% endif %}>{{ opt }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        {% elif q.input_type == 'textarea' %}
+                                            <textarea name="question_{{ q.field_name }}" class="form-control form-control-sm" rows="3" placeholder="Enter your response...">{{ answers|dict_lookup:q.field_name|default:q.current_value }}</textarea>
+                                        {% else %}
+                                            <input type="text" name="question_{{ q.field_name }}" class="form-control form-control-sm" value="{{ answers|dict_lookup:q.field_name|default:q.current_value }}" placeholder="Enter answer...">
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+
+                            <button type="submit" class="btn btn-outline-primary btn-sm rounded-pill px-4">
+                                <i class="bi bi-save me-1"></i> Save Answers
+                            </button>
+                        </form>
+                    {% else %}
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-check-circle text-success fs-2 mb-2 d-block"></i>
+                            <h6 class="fw-semibold">No Custom Questions Pending</h6>
+                            <p class="small mb-0">All necessary candidate fields were detected and auto-filled from your profile.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Auto-Filled Profile Fields Card -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
+                <div class="card-header bg-white border-bottom p-4">
+                    <h5 class="fw-bold mb-1 d-flex align-items-center gap-2">
+                        <i class="bi bi-check2-all text-success"></i> Auto-Filled Profile Fields
+                    </h5>
+                    <p class="text-muted small mb-0">Data mapped safely from candidate profile into the external application form.</p>
+                </div>
+                <div class="card-body p-4">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm align-middle small mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Field</th>
+                                    <th>Candidate Value</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="filled-fields-tbody">
+                                <tr>
+                                    <td class="fw-semibold text-muted">Full Name</td>
+                                    <td>{{ user.profile.display_name }}</td>
+                                    <td><span class="badge bg-success-subtle text-success"><i class="bi bi-check-lg me-1"></i>Mapped</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-muted">Email</td>
+                                    <td>{{ user.email }}</td>
+                                    <td><span class="badge bg-success-subtle text-success"><i class="bi bi-check-lg me-1"></i>Mapped</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-muted">Phone</td>
+                                    <td>{{ user.profile.phone|default:"Not specified" }}</td>
+                                    <td><span class="badge bg-success-subtle text-success"><i class="bi bi-check-lg me-1"></i>Mapped</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-muted">Current Location</td>
+                                    <td>{{ user.profile.current_location|default:"Not specified" }}</td>
+                                    <td><span class="badge bg-success-subtle text-success"><i class="bi bi-check-lg me-1"></i>Mapped</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-muted">Work Authorization</td>
+                                    <td>{{ user.profile.work_authorization|default:"Authorized" }}</td>
+                                    <td><span class="badge bg-success-subtle text-success"><i class="bi bi-check-lg me-1"></i>Mapped</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-muted">Years of Experience</td>
+                                    <td>{{ user.profile.years_of_experience }} years</td>
+                                    <td><span class="badge bg-success-subtle text-success"><i class="bi bi-check-lg me-1"></i>Mapped</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold text-muted">Notice Period</td>
+                                    <td>{{ user.profile.notice_period_days }} days</td>
+                                    <td><span class="badge bg-success-subtle text-success"><i class="bi bi-check-lg me-1"></i>Mapped</span></td>
+                                </tr>
+                                {% if user.profile.linkedin_url %}
+                                <tr>
+                                    <td class="fw-semibold text-muted">LinkedIn URL</td>
+                                    <td><a href="{{ user.profile.linkedin_url }}" target="_blank" class="text-truncate d-inline-block" style="max-width: 250px;">{{ user.profile.linkedin_url }}</a></td>
+                                    <td><span class="badge bg-success-subtle text-success"><i class="bi bi-check-lg me-1"></i>Mapped</span></td>
+                                </tr>
+                                {% endif %}
+                                {% if user.profile.github_url %}
+                                <tr>
+                                    <td class="fw-semibold text-muted">GitHub URL</td>
+                                    <td><a href="{{ user.profile.github_url }}" target="_blank" class="text-truncate d-inline-block" style="max-width: 250px;">{{ user.profile.github_url }}</a></td>
+                                    <td><span class="badge bg-success-subtle text-success"><i class="bi bi-check-lg me-1"></i>Mapped</span></td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Resume Card, Notes, & Audit Logs -->
+        <div class="col-lg-5">
+            <!-- Selected Resume Card -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
+                <div class="card-header bg-white border-bottom p-4">
+                    <h5 class="fw-bold mb-1 d-flex align-items-center gap-2">
+                        <i class="bi bi-file-earmark-pdf-fill text-danger"></i> Attached Resume
+                    </h5>
+                    <p class="text-muted small mb-0">The PDF resume attached by the automation agent.</p>
+                </div>
+                <div class="card-body p-4">
+                    {% if resume %}
+                        <div class="d-flex align-items-center justify-content-between p-3 border rounded-3 bg-light-subtle">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="bg-danger-subtle text-danger rounded-3 p-2 fs-4">
+                                    <i class="bi bi-file-pdf"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-dark">{{ resume.name }}</div>
+                                    <div class="text-muted extra-small">
+                                        Version {{ resume.version }} &bull; {{ resume.file_size_kb|default:0 }} KB
+                                    </div>
+                                </div>
+                            </div>
+                            {% if resume.file %}
+                                <a href="{{ resume.file.url }}" target="_blank" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                                    <i class="bi bi-eye me-1"></i> View PDF
+                                </a>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning border-0 rounded-3 small mb-0">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i> No resume attached to this application.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Notes Card -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
+                <div class="card-header bg-white border-bottom p-4">
+                    <h5 class="fw-bold mb-1 d-flex align-items-center gap-2">
+                        <i class="bi bi-journal-text text-primary"></i> Application Notes
+                    </h5>
+                    <p class="text-muted small mb-0">Private recruiter notes, follow-up dates, or reminders.</p>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" action="{% url 'applications:review' application.pk %}">
+                        {% csrf_token %}
+                        <textarea name="notes" class="form-control form-control-sm mb-3" rows="3" placeholder="Add recruiter contact, referral name, follow-up notes...">{{ application.notes }}</textarea>
+                        <button type="submit" class="btn btn-light border btn-sm rounded-pill px-3">
+                            <i class="bi bi-check me-1"></i> Update Notes
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Live Audit Logs Card -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
+                <div class="card-header bg-white border-bottom p-4 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="fw-bold mb-1 d-flex align-items-center gap-2">
+                            <i class="bi bi-clock-history text-secondary"></i> Live Audit Log
+                        </h5>
+                        <p class="text-muted small mb-0">Transparent real-time execution trail.</p>
+                    </div>
+                    <span class="badge bg-light text-muted border small"><i class="bi bi-shield-lock me-1"></i>Sanitized</span>
+                </div>
+                <div class="card-body p-3">
+                    <div id="logs-container" class="d-flex flex-column gap-2" style="max-height: 380px; overflow-y: auto;">
+                        {% for log in logs %}
+                            <div class="p-2 rounded-2 border bg-light-subtle extra-small">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="badge {% if log.level == 'SUCCESS' %}bg-success{% elif log.level == 'WARNING' %}bg-warning text-dark{% elif log.level == 'ERROR' %}bg-danger{% else %}bg-primary{% endif %} py-1 px-2">
+                                        {{ log.action }}
+                                    </span>
+                                    <span class="text-muted">{{ log.timestamp|date:"H:i:s" }}</span>
+                                </div>
+                                <div class="text-dark">{{ log.message }}</div>
+                            </div>
+                        {% empty %}
+                            <div class="text-center py-3 text-muted small">
+                                No logs recorded yet.
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Confirm & Submit Application -->
+<div class="modal fade" id="confirmSubmitModal" tabindex="-1" aria-labelledby="confirmSubmitModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="confirmSubmitModalLabel">
+                    <i class="bi bi-shield-check text-primary me-2"></i>Confirm Final Submission
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'applications:confirm_submit' application.pk %}">
+                {% csrf_token %}
+                <div class="modal-body pt-3">
+                    <p class="text-muted small mb-3">
+                        Please review your application details one last time before confirming. Once confirmed, JobAutoApply will execute the final submission on the external portal.
+                    </p>
+
+                    <div class="p-3 bg-light rounded-3 mb-3 small">
+                        <div class="row g-2">
+                            <div class="col-4 text-muted fw-semibold">Job Title:</div>
+                            <div class="col-8 fw-bold text-dark">{{ job.title }}</div>
+                            <div class="col-4 text-muted fw-semibold">Company:</div>
+                            <div class="col-8">{{ job.company }}</div>
+                            <div class="col-4 text-muted fw-semibold">Resume:</div>
+                            <div class="col-8">{{ resume.name|default:"None" }}</div>
+                            <div class="col-4 text-muted fw-semibold">Applicant:</div>
+                            <div class="col-8">{{ user.profile.display_name }} ({{ user.email }})</div>
+                        </div>
+                    </div>
+
+                    <div class="form-check small text-muted">
+                        <input class="form-check-input" type="checkbox" id="userConfirmCheck" required>
+                        <label class="form-check-label" for="userConfirmCheck">
+                            I have reviewed the pre-filled information and custom answers, and explicitly authorize this submission.
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-gradient-accent rounded-pill px-4">
+                        <i class="bi bi-send-fill me-1"></i> Authorize & Submit
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const appId = {{ application.pk }};
+    const statusApiUrl = "{% url 'applications:status_api' application.pk %}";
+
+    let currentStatus = "{{ application.status }}";
+    let autoStatus = "{{ application.automation_status }}";
+
+    // Helper to render logs
+    function renderLogs(logs) {
+        const container = document.getElementById('logs-container');
+        if (!container || !logs || logs.length === 0) return;
+
+        container.innerHTML = logs.map(log => {
+            let badgeClass = 'bg-primary';
+            if (log.level === 'SUCCESS') badgeClass = 'bg-success';
+            if (log.level === 'WARNING') badgeClass = 'bg-warning text-dark';
+            if (log.level === 'ERROR') badgeClass = 'bg-danger';
+
+            return `
+                <div class="p-2 rounded-2 border bg-light-subtle extra-small">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="badge ${badgeClass} py-1 px-2">${log.action}</span>
+                        <span class="text-muted">${log.timestamp}</span>
+                    </div>
+                    <div class="text-dark">${log.message}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Polling worker
+    function pollStatus() {
+        // Stop polling if already submitted or in terminal state
+        if (currentStatus === 'SUBMITTED' || currentStatus === 'CANCELLED' || (currentStatus === 'REVIEW_REQUIRED' && autoStatus === 'WAITING_FOR_REVIEW')) {
+            return;
+        }
+
+        fetch(statusApiUrl)
+            .then(res => res.json())
+            .then(data => {
+                currentStatus = data.status;
+                autoStatus = data.automation_status;
+
+                // Update Badges
+                const appBadge = document.getElementById('app-status-badge');
+                if (appBadge) {
+                    appBadge.className = `badge ${data.status_badge} px-3 py-2 fs-7`;
+                    appBadge.innerText = data.status_display;
+                }
+
+                const autoBadge = document.getElementById('auto-status-badge');
+                const autoText = document.getElementById('auto-status-text');
+                if (autoBadge && autoText) {
+                    autoBadge.className = `badge ${data.automation_badge} px-3 py-2 fs-7`;
+                    autoText.innerText = data.automation_status_display;
+                }
+
+                // Update Error Box
+                const errBox = document.getElementById('error-alert-box');
+                const errMsg = document.getElementById('error-alert-msg');
+                if (errBox && errMsg) {
+                    if (data.error_message) {
+                        errMsg.innerText = data.error_message;
+                        errBox.classList.remove('d-none');
+                    } else {
+                        errBox.classList.add('d-none');
+                    }
+                }
+
+                // Render Logs
+                renderLogs(data.logs);
+
+                // If finished or transitioned to review required, reload page once to ensure all questions form inputs are fresh
+                if (data.is_review_ready && !window.hasReloadedForReview) {
+                    window.hasReloadedForReview = true;
+                    setTimeout(() => window.location.reload(), 1000);
+                } else if (data.is_submitted) {
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    setTimeout(pollStatus, 2500);
+                }
+            })
+            .catch(err => {
+                console.error("Status polling failed:", err);
+                setTimeout(pollStatus, 4000);
+            });
+    }
+
+    // Start polling if not yet submitted
+    if (currentStatus !== 'SUBMITTED') {
+        setTimeout(pollStatus, 1500);
+    }
+});
+</script>
+{% endblock %}

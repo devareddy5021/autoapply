@@ -27,3 +27,7 @@ staticfiles/
 .idea/
 .vscode/
 *.swp
+
+# Automation Browser Profiles
+browser_profile/
+

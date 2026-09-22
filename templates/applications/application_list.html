@@ -101,6 +101,15 @@
                         </td>
                         <td class="text-end">
                             <div class="d-flex justify-content-end gap-1">
+                                {% if app.status == 'REVIEW_REQUIRED' or app.automation_status == 'WAITING_FOR_REVIEW' %}
+                                    <a href="{% url 'applications:review' app.pk %}" class="btn btn-sm btn-warning text-dark fw-semibold" title="Human Review Required">
+                                        <i class="bi bi-shield-check me-1"></i> Review
+                                    </a>
+                                {% else %}
+                                    <a href="{% url 'applications:review' app.pk %}" class="btn btn-sm btn-light border text-primary" title="View Review Details">
+                                        <i class="bi bi-robot"></i>
+                                    </a>
+                                {% endif %}
                                 <a href="{% url 'applications:detail' app.pk %}" class="btn btn-sm btn-outline-custom">
                                     Manage
                                 </a>
@@ -117,6 +126,7 @@
                                 </form>
                             </div>
                         </td>
+
                     </tr>
                     {% endfor %}
                 </tbody>

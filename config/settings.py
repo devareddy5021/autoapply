@@ -173,3 +173,9 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
 }
+
+# Milestone 3 — Chrome Browser Automation Settings
+PLAYWRIGHT_HEADLESS = os.getenv('PLAYWRIGHT_HEADLESS', 'False').lower() in ('true', '1')
+AUTOMATION_TEST_MODE = os.getenv('AUTOMATION_TEST_MODE', 'True').lower() in ('true', '1')
+BROWSER_PROFILE_DIR = BASE_DIR / 'browser_profile'
+os.makedirs(BROWSER_PROFILE_DIR, exist_ok=True)

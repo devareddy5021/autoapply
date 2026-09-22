@@ -8,6 +8,8 @@ from .models import Job, UserJob
 from .forms import JobForm
 from . import selectors, services
 from applications.models import Application
+from resumes.models import Resume
+
 
 @login_required
 def job_list_view(request):
@@ -91,6 +93,7 @@ def job_detail_view(request, pk):
     }
 
     application = Application.objects.filter(user=request.user, job=job).first()
+    user_resumes = Resume.objects.filter(user=request.user)
 
     return render(request, 'jobs/job_detail.html', {
         'job': job,
@@ -99,7 +102,9 @@ def job_detail_view(request, pk):
         'is_saved': user_job.is_saved,
         'is_ignored': user_job.is_ignored,
         'application': application,
+        'user_resumes': user_resumes,
     })
+
 
 
 @login_required
