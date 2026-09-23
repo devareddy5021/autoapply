@@ -34,34 +34,45 @@ def get_distinct_locations() -> List[str]:
 
 def get_dashboard_statistics(user: User) -> Dict[str, int]:
     """
-    Computes dashboard metrics using actual database records:
-    - Total Jobs: count of all active jobs
-    - New Jobs: jobs discovered within the last 7 days
+    Computes dashboard metrics using actual database records (Section 18):
+    - India Data Jobs: count of active India data opportunities
+    - Remote Data Jobs: count of active Remote data opportunities
+    - New Today: jobs discovered within the past 24 hours
+    - High Match (80%+): count of jobs with match score >= 80% for the user
     - Saved Jobs: count of jobs saved by the user
-    - High Match Jobs: count of jobs with match score >= 70% for the user
-    - Applications: total application records tracked by user
     """
     now = timezone.now()
-    seven_days_ago = now - timedelta(days=7)
+    one_day_ago = now - timedelta(days=1)
 
-    total_jobs = Job.objects.filter(is_active=True).count()
-    new_jobs = Job.objects.filter(is_active=True, discovered_at__gte=seven_days_ago).count()
+    base_active_data_qs = Job.objects.filter(is_active=True).filter(
+        Q(is_india=True) | Q(is_remote=True)
+    )
+
+    india_data_jobs = base_active_data_qs.filter(is_india=True).count()
+    remote_data_jobs = base_active_data_qs.filter(is_remote=True).count()
+    new_today = base_active_data_qs.filter(discovered_at__gte=one_day_ago).count()
+    total_data_jobs = base_active_data_qs.count()
 
     if user and user.is_authenticated:
         saved_jobs = UserJob.objects.filter(user=user, is_saved=True, job__is_active=True).count()
-        high_match_jobs = UserJob.objects.filter(user=user, match_score__gte=70, is_ignored=False, job__is_active=True).count()
-        applications_count = Application.objects.filter(user=user).count()
+        high_match_jobs = UserJob.objects.filter(
+            user=user,
+            match_score__gte=80,
+            is_ignored=False,
+            job__is_active=True
+        ).count()
     else:
         saved_jobs = 0
         high_match_jobs = 0
-        applications_count = 0
 
     return {
-        'total_jobs': total_jobs,
-        'new_jobs': new_jobs,
-        'saved_jobs': saved_jobs,
+        'total_jobs': total_data_jobs,
+        'total_data_jobs': total_data_jobs,
+        'india_data_jobs': india_data_jobs,
+        'remote_data_jobs': remote_data_jobs,
+        'new_today': new_today,
         'high_match_jobs': high_match_jobs,
-        'applications_count': applications_count,
+        'saved_jobs': saved_jobs,
     }
 
 def filter_and_search_jobs(
@@ -70,6 +81,7 @@ def filter_and_search_jobs(
     location: str = '',
     work_mode: str = '',
     employment_type: str = '',
+    category: str = '',
     source: str = '',
     min_score: Optional[int] = None,
     experience: str = '',
@@ -79,9 +91,18 @@ def filter_and_search_jobs(
 ) -> List[Dict[str, Any]]:
     """
     Core selector for filtering, searching, and sorting jobs.
-    Integrates user-specific state (saved, ignored, match score) while keeping business logic out of views.
+    Displays:
+    - Active jobs
+    - India OR Remote opportunities
+    - Category filtering when selected
     """
-    qs = Job.objects.filter(is_active=True)
+    qs = Job.objects.filter(is_active=True).filter(
+        Q(is_india=True) | Q(is_remote=True)
+    )
+
+    # Category filter
+    if category:
+        qs = qs.filter(job_category=category.strip())
 
     # Search keyword across title, company, skills, location, description
     if query:

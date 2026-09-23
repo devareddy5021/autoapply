@@ -67,11 +67,42 @@ class Profile(models.Model):
         blank=True,
         help_text="Maximum expected annual compensation"
     )
-    salary_currency = models.CharField(max_length=10, default='USD')
+    salary_currency = models.CharField(max_length=10, default='INR')
     work_preference = models.CharField(
         max_length=20,
         choices=WorkPreference.choices,
         default=WorkPreference.FLEXIBLE
+    )
+
+    # Milestone 3 User Discovery Preferences
+    target_roles = models.TextField(
+        blank=True,
+        default="Data Engineer, Junior Data Engineer, Data Analyst, Data Scientist, Machine Learning Engineer",
+        help_text="Target roles to aggregate and prioritize"
+    )
+    min_match_score = models.PositiveIntegerField(
+        default=70,
+        help_text="Minimum match score threshold (percentage)"
+    )
+    remote_only = models.BooleanField(
+        default=False,
+        help_text="Only show fully remote opportunities"
+    )
+    internship_allowed = models.BooleanField(default=True)
+    trainee_allowed = models.BooleanField(default=True)
+    full_time_allowed = models.BooleanField(default=True)
+    contract_allowed = models.BooleanField(default=True)
+    experience_level = models.CharField(
+        max_length=30,
+        default='ALL',
+        choices=[
+            ('ALL', 'All Experience Levels'),
+            ('FRESHER', 'Fresher / Entry (0-1 yrs)'),
+            ('JUNIOR', 'Junior (1-3 yrs)'),
+            ('MID', 'Mid-Level (3-5 yrs)'),
+            ('SENIOR', 'Senior (5-8 yrs)'),
+            ('LEAD', 'Lead / Staff (8+ yrs)'),
+        ]
     )
 
     created_at = models.DateTimeField(auto_now_add=True)

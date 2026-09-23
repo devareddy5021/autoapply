@@ -31,3 +31,7 @@ staticfiles/
 # Automation Browser Profiles
 browser_profile/
 
+# Scratch & Local History Dumps
+*.jsonl
+scratch_*.py
+scratch/

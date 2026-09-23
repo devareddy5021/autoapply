@@ -6,7 +6,7 @@ import logging
 from typing import Optional, Tuple, Dict, Any, List
 from django.utils import timezone
 from django.contrib.auth.models import User
-from .models import Job, UserJob, normalize_job_url
+from jobs.models import Job, UserJob, normalize_job_url
 from accounts.models import Profile
 from resumes.models import Resume
 from matching.services import calculate_match_score

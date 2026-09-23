@@ -218,14 +218,19 @@ class JobViewsTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Senior Django Developer")
         self.assertContains(response, "Global Tech")
-        self.assertContains(response, "Total Jobs")
+        self.assertContains(response, "India Jobs")
 
     def test_job_detail_view(self):
+        # Set external_url so Open Original is rendered
+        self.job.external_url = "https://globaltech.example.com/jobs/1"
+        self.job.save()
+
         response = self.client.get(reverse('jobs:detail', args=[self.job.pk]))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Senior Django Developer")
-        self.assertContains(response, "Explainable Match")
-        self.assertContains(response, "Prepare Application")
+        self.assertContains(response, "Profile Match")
+        self.assertContains(response, "Application automation is currently disabled")
+        self.assertContains(response, "Open Original")
 
     def test_job_save_toggle_view(self):
         # Save job

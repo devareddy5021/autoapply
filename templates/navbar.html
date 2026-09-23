@@ -1,8 +1,11 @@
 <nav class="navbar navbar-expand-lg navbar-custom">
     <div class="container">
-        <a class="brand-logo" href="{% url 'dashboard:index' %}">
+        <a class="brand-logo d-flex align-items-center" href="{% url 'dashboard:index' %}">
             <span class="brand-icon"><i class="bi bi-robot"></i></span>
             <span>JobAutoApply</span>
+            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill ms-2 fw-semibold d-none d-sm-inline" style="font-size: 0.68rem; letter-spacing: 0.3px;">
+                <i class="bi bi-mortarboard-fill me-1"></i>Students & Freshers
+            </span>
         </a>
         
         <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
@@ -25,6 +28,11 @@
                 <li class="nav-item">
                     <a class="nav-link-custom {% if request.resolver_match.url_name == 'saved' %}active{% endif %}" href="{% url 'jobs:saved' %}">
                         <i class="bi bi-bookmark-star me-1"></i> Saved Jobs
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link-custom {% if request.resolver_match.url_name == 'sources_status' %}active{% endif %}" href="{% url 'jobs:sources_status' %}">
+                        <i class="bi bi-hdd-network me-1"></i> Sources
                     </a>
                 </li>
                 <li class="nav-item">
