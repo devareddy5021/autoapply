@@ -26,60 +26,9 @@ def clean_html_text(raw_html: str) -> str:
 def parse_experience_requirements(title: str, text: str) -> Tuple[float, Optional[float]]:
     """
     Intelligently extracts required years of experience from job title and description.
-    Supports formats like:
-      - '3 - 5 years of experience' -> (3.0, 5.0)
-      - '5+ years' -> (5.0, 8.0)
-      - 'at least 2 years' -> (2.0, 5.0)
-    Falls back to title seniority cues:
-      - 'Principal / Architect / Director' -> (8.0, 15.0)
-      - 'Lead / Staff' -> (7.0, 10.0)
-      - 'Senior' -> (5.0, 8.0)
-      - 'Mid / Intermediate' -> (3.0, 5.0)
-      - 'Junior / Entry / Associate' -> (1.0, 3.0)
-      - 'Intern / Trainee' -> (0.0, 1.0)
     """
-    combined = f"{title} {text}".lower()
-
-    # Pattern 1: Range '3 - 5 years' or '3 to 5 years'
-    range_match = re.search(r'(\d+(?:\.\d+)?)\s*(?:-|to)\s*(\d+(?:\.\d+)?)\s*years?', combined)
-    if range_match:
-        try:
-            min_y = float(range_match.group(1))
-            max_y = float(range_match.group(2))
-            if 0 <= min_y <= 25 and min_y <= max_y <= 30:
-                return min_y, max_y
-        except ValueError:
-            pass
-
-    # Pattern 2: 'X+ years' or 'at least X years' or 'X years of experience'
-    single_match = re.search(r'(?:at least|minimum|min|with)\s*(\d+(?:\.\d+)?)\+?\s*years?', combined)
-    if not single_match:
-        single_match = re.search(r'(\d+(?:\.\d+)?)\+?\s*years?\s*(?:of\s*)?(?:relevant|hands-on|industry|commercial|professional)?\s*experience', combined)
-
-    if single_match:
-        try:
-            val = float(single_match.group(1))
-            if 0 <= val <= 25:
-                return val, round(val + 3.0, 1)
-        except ValueError:
-            pass
-
-    # Title seniority heuristics
-    title_lower = title.lower()
-    if any(w in title_lower for w in ['principal', 'director', 'vp', 'head of', 'architect']):
-        return 8.0, 15.0
-    if any(w in title_lower for w in ['lead', 'staff', 'manager']):
-        return 7.0, 10.0
-    if any(w in title_lower for w in ['senior', 'sr.', 'sr ']):
-        return 5.0, 8.0
-    if any(w in title_lower for w in ['mid', 'intermediate']):
-        return 3.0, 5.0
-    if any(w in title_lower for w in ['junior', 'jr.', 'jr ', 'entry', 'associate', 'fresh']):
-        return 1.0, 3.0
-    if any(w in title_lower for w in ['intern', 'internship', 'trainee', 'student']):
-        return 0.0, 1.0
-
-    return 2.0, 5.0  # Industry standard default
+    from jobs.services.job_classifier import parse_experience_requirements as _parse_exp
+    return _parse_exp(title, text)
 
 
 class JobDeduplicationService:

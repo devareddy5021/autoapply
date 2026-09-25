@@ -15,7 +15,12 @@
 
     <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
         <div>
-            <h2 class="fw-bold text-dark mb-1">{{ job.title }}</h2>
+            <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                <h2 class="fw-bold text-dark mb-0">{{ job.title }}</h2>
+                <span class="badge bg-{{ job.authenticity_info.badge_color }}-subtle text-{{ job.authenticity_info.badge_color }} border border-{{ job.authenticity_info.badge_color }}-subtle px-2 py-1 rounded-pill small fw-semibold" title="{{ job.authenticity_info.summary }}">
+                    <i class="bi {{ job.authenticity_info.badge_icon }} me-1"></i>{{ job.authenticity_info.badge_label }} (Trust Score: {{ job.authenticity_info.score }}%)
+                </span>
+            </div>
             <div class="d-flex align-items-center gap-3 text-muted flex-wrap">
                 <span class="fw-semibold text-dark fs-6">{{ job.company_name }}</span>
                 <span>&bull;</span>
@@ -118,7 +123,7 @@
         {% endif %}
     </div>
 
-    <!-- Right Column: Profile Match, Application Policy, Multi-Source Discovery -->
+    <!-- Right Column: Profile Match, Authenticity, Application Policy, Multi-Source Discovery -->
     <div class="col-lg-4">
         <!-- Milestone 3 Policy Notice (Section 30) -->
         <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
@@ -136,10 +141,44 @@
             {% endif %}
         </div>
 
-        <!-- Explainable Profile Fit Score -->
+        <!-- Trust & Authenticity Card -->
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="fw-bold text-dark mb-0">
+                    <i class="bi bi-shield-check text-primary me-2"></i>Job Authenticity
+                </h6>
+                <span class="badge bg-{{ job.authenticity_info.badge_color }}-subtle text-{{ job.authenticity_info.badge_color }} border border-{{ job.authenticity_info.badge_color }}-subtle rounded-pill">
+                    {{ job.authenticity_info.badge_label }}
+                </span>
+            </div>
+            <div class="small text-muted mb-3">{{ job.authenticity_info.summary }}</div>
+            {% if job.authenticity_info.flags %}
+                <ul class="list-unstyled mb-0 small">
+                    {% for flag in job.authenticity_info.flags %}
+                        <li class="d-flex align-items-start gap-2 mb-2">
+                            {% if job.authenticity_info.is_suspicious %}
+                                <i class="bi bi-exclamation-triangle-fill text-danger flex-shrink-0 mt-1"></i>
+                                <span class="text-danger">{{ flag }}</span>
+                            {% elif job.authenticity_info.is_third_party %}
+                                <i class="bi bi-info-circle-fill text-warning flex-shrink-0 mt-1"></i>
+                                <span class="text-secondary">{{ flag }}</span>
+                            {% else %}
+                                <i class="bi bi-check-circle-fill text-success flex-shrink-0 mt-1"></i>
+                                <span class="text-secondary">{{ flag }}</span>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+
+        <!-- Explainable Profile & Full Resume Match Score -->
         <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="fw-bold text-dark mb-0">Profile Match</h6>
+                <div>
+                    <h6 class="fw-bold text-dark mb-0">Profile & Resume Match</h6>
+                    <small class="text-muted">Algorithmic fit breakdown</small>
+                </div>
                 <span class="badge {% if match.score >= 80 %}bg-success text-white{% elif match.score >= 50 %}bg-warning text-dark{% else %}bg-secondary text-white{% endif %} py-1 px-3 fs-6">
                     {{ match.score }}% Match
                 </span>
@@ -148,6 +187,53 @@
             <div class="progress mb-3" style="height: 6px;">
                 <div class="progress-bar {% if match.score >= 80 %}bg-success{% elif match.score >= 50 %}bg-warning{% else %}bg-secondary{% endif %}" role="progressbar" style="width: {{ match.score }}%;"></div>
             </div>
+
+            <!-- Full Resume Deep Analysis -->
+            {% if match.resume_analysis.has_resume %}
+                <div class="p-3 rounded-3 bg-light border mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small fw-bold text-dark"><i class="bi bi-file-earmark-person-fill text-primary me-1"></i>Full Resume Match</span>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill">{{ match.resume_analysis.score }}% &bull; {{ match.resume_analysis.fit_level }}</span>
+                    </div>
+                    {% if match.resume_analysis.matched_keywords %}
+                        <div class="small text-muted mb-2">
+                            <span class="fw-semibold text-dark">Matched From Your Resume:</span>
+                            <div class="d-flex flex-wrap gap-1 mt-1">
+                                {% for kw in match.resume_analysis.matched_keywords %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle py-0 px-2 fw-normal" style="font-size: 0.72rem;">
+                                        <i class="bi bi-check me-1"></i>{{ kw }}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                    {% if match.resume_analysis.missing_keywords %}
+                        <div class="small text-muted mb-2">
+                            <span class="fw-semibold text-dark">Missing From Your Resume:</span>
+                            <div class="d-flex flex-wrap gap-1 mt-1">
+                                {% for kw in match.resume_analysis.missing_keywords %}
+                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle py-0 px-2 fw-normal" style="font-size: 0.72rem;">
+                                        {{ kw }}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                    {% if match.resume_analysis.advice %}
+                        <div class="small text-primary mt-2 pt-2 border-top">
+                            <i class="bi bi-lightbulb-fill me-1"></i>{{ match.resume_analysis.advice }}
+                        </div>
+                    {% endif %}
+                </div>
+            {% else %}
+                <div class="alert alert-light border small text-muted p-2 rounded-3 mb-3 d-flex align-items-center justify-content-between">
+                    <div>
+                        <i class="bi bi-file-earmark-arrow-up text-primary me-1"></i>
+                        <span>Upload your PDF resume to unlock project & technical matching.</span>
+                    </div>
+                    <a href="{% url 'resumes:upload' %}" class="btn btn-sm btn-outline-primary py-0 px-2 ms-2 text-nowrap" style="font-size: 0.75rem;">Upload</a>
+                </div>
+            {% endif %}
 
             {% if match.reasons %}
                 <div class="mb-3">

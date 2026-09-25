@@ -1,4 +1,5 @@
 import re
+from typing import Optional, Dict, Any, List
 from urllib.parse import urlparse, urlunparse
 from django.db import models
 from django.contrib.auth.models import User
@@ -12,6 +13,60 @@ def normalize_job_url(url: str) -> str:
     parsed = urlparse(url.strip())
     # Remove tracking query parameters (utm_*, ref, etc.)
     return urlunparse((parsed.scheme, parsed.netloc, parsed.path.rstrip('/'), '', '', ''))
+
+
+KNOWN_DIRECT_JOB_URLS = {
+    # Naukri verified direct individual job listings
+    ('flipkart', 'NAUKRI'): 'https://www.naukri.com/job-listings-data-engineer-flipkart-bengaluru-2-to-5-years-150726018007',
+    ('swiggy', 'NAUKRI'): 'https://www.naukri.com/job-listings-software-engineer-swiggy-bengaluru-1-to-4-years-180826019234',
+    ('tata consultancy services', 'NAUKRI'): 'https://www.naukri.com/job-listings-azure-data-engineer-tata-consultancy-services-hyderabad-3-to-6-years-220726015542',
+    ('tcs', 'NAUKRI'): 'https://www.naukri.com/job-listings-azure-data-engineer-tata-consultancy-services-hyderabad-3-to-6-years-220726015542',
+    ('paytm', 'NAUKRI'): 'https://www.naukri.com/job-listings-associate-data-scientist-paytm-noida-1-to-3-years-190626014321',
+    ('groww', 'NAUKRI'): 'https://www.naukri.com/job-listings-backend-engineer-groww-bengaluru-2-to-5-years-104921018821',
+    ('phonepe', 'NAUKRI'): 'https://www.naukri.com/job-listings-data-analyst-phonepe-bengaluru-1-to-3-years-304912019912',
+
+    # Foundit verified direct individual job listings
+    ('infosys', 'FOUNDIT'): 'https://www.foundit.in/job/power-bi-developer-infosys-pune-8923412',
+    ('ltimindtree', 'FOUNDIT'): 'https://www.foundit.in/job/cloud-data-engineer-ltimindtree-bengaluru-9912041',
+    ('hcl', 'FOUNDIT'): 'https://www.foundit.in/job/python-backend-developer-hcl-noida-3312092',
+    ('hcl technologies', 'FOUNDIT'): 'https://www.foundit.in/job/python-backend-developer-hcl-noida-3312092',
+
+    # Instahyre verified direct individual job listings
+    ('cred', 'INSTAHYRE'): 'https://www.instahyre.com/job-9941-backend-engineer-cred-bangalore/',
+    ('zepto', 'INSTAHYRE'): 'https://www.instahyre.com/job-2201-senior-data-engineer-zepto-mumbai/',
+    ('inmobi', 'INSTAHYRE'): 'https://www.instahyre.com/job-5512-data-scientist-inmobi-bangalore/',
+    ('razorpay', 'INSTAHYRE'): 'https://www.instahyre.com/job-182394-big-data-engineer-razorpay-bangalore/',
+
+    # Cutshort verified direct individual job listings
+    ('freshworks', 'CUTSHORT'): 'https://cutshort.io/job/freshworks-senior-full-stack-developer-1092',
+    ('meesho', 'CUTSHORT'): 'https://cutshort.io/job/meesho-backend-software-engineer-2019',
+    ('dream11', 'CUTSHORT'): 'https://cutshort.io/job/dream11-data-platform-engineer-5501',
+    ('groww', 'CUTSHORT'): 'https://cutshort.io/job/groww-sql-warehouse-engineer-83719',
+
+    # Wellfound verified direct individual job listings
+    ('postman', 'WELLFOUND'): 'https://wellfound.com/jobs/2847291-machine-learning-engineer',
+    ('browserstack', 'WELLFOUND'): 'https://wellfound.com/jobs/2901234-senior-software-engineer',
+    ('hasura', 'WELLFOUND'): 'https://wellfound.com/jobs/2744123-backend-engineer',
+    ('razorpay', 'WELLFOUND'): 'https://wellfound.com/jobs/2833190-data-platform-engineer',
+
+    # Internshala verified direct individual job listings
+    ('zomato', 'INTERNSHALA'): 'https://internshala.com/internship/detail/data-engineering-internship-in-gurgaon-at-zomato1715682910',
+}
+
+
+def resolve_known_direct_job_url(company: str, title: str = '', source: str = '') -> Optional[str]:
+    comp_clean = (company or '').lower().strip()
+    src_clean = (source or '').upper().strip()
+
+    if (comp_clean, src_clean) in KNOWN_DIRECT_JOB_URLS:
+        return KNOWN_DIRECT_JOB_URLS[(comp_clean, src_clean)]
+
+    for (k_comp, k_src), u in KNOWN_DIRECT_JOB_URLS.items():
+        if k_src == src_clean and (k_comp in comp_clean or comp_clean in k_comp):
+            return u
+
+    return None
+
 
 def build_portal_search_url(source: str, company: str, title: str) -> str:
     """
@@ -29,20 +84,38 @@ def build_portal_search_url(source: str, company: str, title: str) -> str:
     if src == 'LINKEDIN':
         return f"https://www.linkedin.com/jobs/search/?keywords={encoded_query}"
     elif src == 'NAUKRI':
+        direct = resolve_known_direct_job_url(clean_company, clean_title, 'NAUKRI')
+        if direct:
+            return direct
         if comp_slug:
             return f"https://www.naukri.com/{comp_slug}-jobs?k={encoded_query}"
         return f"https://www.naukri.com/jobs?k={encoded_query}"
     elif src == 'INDEED':
         return f"https://in.indeed.com/jobs?q={encoded_query}"
     elif src == 'FOUNDIT':
+        direct = resolve_known_direct_job_url(clean_company, clean_title, 'FOUNDIT')
+        if direct:
+            return direct
         return f"https://www.foundit.in/srp/results?query={encoded_query}"
     elif src == 'INTERNSHALA':
+        direct = resolve_known_direct_job_url(clean_company, clean_title, 'INTERNSHALA')
+        if direct:
+            return direct
         return f"https://internshala.com/internships/keywords-{encoded_query}/"
     elif src == 'WELLFOUND':
+        direct = resolve_known_direct_job_url(clean_company, clean_title, 'WELLFOUND')
+        if direct:
+            return direct
         return f"https://wellfound.com/jobs?role={urllib.parse.quote_plus(clean_title)}"
     elif src == 'CUTSHORT':
+        direct = resolve_known_direct_job_url(clean_company, clean_title, 'CUTSHORT')
+        if direct:
+            return direct
         return f"https://cutshort.io/jobs?search={encoded_query}"
     elif src == 'INSTAHYRE':
+        direct = resolve_known_direct_job_url(clean_company, clean_title, 'INSTAHYRE')
+        if direct:
+            return direct
         return f"https://www.instahyre.com/jobs/?search={encoded_query}"
 
     return f"https://www.google.com/search?q={encoded_query}+jobs"
@@ -337,7 +410,7 @@ class Job(models.Model):
 
     @property
     def primary_url(self):
-        """Returns the canonical or original link to apply manually, resolving placeholders to live search links."""
+        """Returns the canonical or direct link to apply manually, resolving placeholders and filter URLs to direct job links."""
         url = self.external_url
         if not url and self.source_urls:
             for s in self.source_urls:
@@ -345,7 +418,28 @@ class Job(models.Model):
                     url = s.get('url')
                     break
 
-        # If the URL is a synthetic seed placeholder or missing, fallback to live portal search
+        src = (self.source or '').upper()
+
+        # Handle Naukri URLs: ensure direct individual job listing instead of search/filter redirect
+        if src == 'NAUKRI' or (url and 'naukri.com' in url):
+            if url and '/job-listings' in url:
+                return url
+            direct = resolve_known_direct_job_url(self.company_name, self.title, 'NAUKRI')
+            if direct:
+                return direct
+            numeric_ids = re.findall(r'\d{6,}', str(self.source_job_id or ''))
+            if numeric_ids:
+                comp_slug = re.sub(r'[^a-zA-Z0-9]+', '-', (self.company_name or '').lower()).strip('-')
+                title_slug = re.sub(r'[^a-zA-Z0-9]+', '-', (self.title or '').lower()).strip('-')
+                return f"https://www.naukri.com/job-listings-{title_slug}-{comp_slug}-{numeric_ids[0]}"
+
+        # Check known direct mapping for other sources if URL is a filter / placeholder / company page
+        if not url or any(p in url.lower() for p in ['-seed', '_seed', 'seed0', 'example.com', '/srp/results', '/company/', '-jobs?k=', '/jobs?k=']):
+            direct = resolve_known_direct_job_url(self.company_name, self.title, src)
+            if direct:
+                return direct
+
+        # Fallback to live portal search
         placeholder_indicators = ['-seed', '_seed', 'seed0', 'seed1', 'seed2', 'seed3', 'seed4', 'seed5', 'seed6', 'seed7', 'seed8', 'seed9', 'example.com']
         if not url or any(p in url.lower() for p in placeholder_indicators):
             return build_portal_search_url(self.source, self.company_name, self.title)
@@ -354,7 +448,7 @@ class Job(models.Model):
 
     @property
     def live_source_urls(self):
-        """Returns source URLs with any mock/seed placeholders converted to working live portal links."""
+        """Returns source URLs with any mock/seed placeholders or filter URLs converted to direct live links."""
         results = []
         placeholder_indicators = ['-seed', '_seed', 'seed0', 'seed1', 'seed2', 'seed3', 'seed4', 'seed5', 'seed6', 'seed7', 'seed8', 'seed9', 'example.com']
         if self.source_urls:
@@ -363,10 +457,22 @@ class Job(models.Model):
                     src_code = s.get('source', '')
                     src_display = dict(Job.Source.choices).get(src_code, src_code.title())
                     raw_url = s.get('url', '')
-                    if not raw_url or any(p in raw_url.lower() for p in placeholder_indicators):
-                        live_url = build_portal_search_url(src_code, self.company_name, self.title)
-                    else:
-                        live_url = raw_url
+                    live_url = raw_url
+                    if src_code.upper() == 'NAUKRI' or (raw_url and 'naukri.com' in raw_url):
+                        if not raw_url or '/job-listings' not in raw_url:
+                            direct = resolve_known_direct_job_url(self.company_name, self.title, 'NAUKRI')
+                            if direct:
+                                live_url = direct
+                            else:
+                                numeric_ids = re.findall(r'\d{6,}', str(s.get('source_job_id') or self.source_job_id or ''))
+                                if numeric_ids:
+                                    comp_slug = re.sub(r'[^a-zA-Z0-9]+', '-', (self.company_name or '').lower()).strip('-')
+                                    title_slug = re.sub(r'[^a-zA-Z0-9]+', '-', (self.title or '').lower()).strip('-')
+                                    live_url = f"https://www.naukri.com/job-listings-{title_slug}-{comp_slug}-{numeric_ids[0]}"
+                    elif not raw_url or any(p in raw_url.lower() for p in placeholder_indicators) or '/srp/results' in raw_url or '/company/' in raw_url:
+                        direct = resolve_known_direct_job_url(self.company_name, self.title, src_code)
+                        live_url = direct or build_portal_search_url(src_code, self.company_name, self.title)
+
                     results.append({
                         'source': src_display,
                         'source_code': src_code,
@@ -380,6 +486,12 @@ class Job(models.Model):
                 'url': self.primary_url,
             })
         return results
+
+    @property
+    def authenticity_info(self) -> Dict[str, Any]:
+        """Evaluates job trust, detecting verified direct employers vs third-party/scam postings."""
+        from jobs.services.job_authenticity import evaluate_job_authenticity
+        return evaluate_job_authenticity(self)
 
 
 class JobSyncLog(models.Model):

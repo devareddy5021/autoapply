@@ -15,11 +15,13 @@ from .wellfound import WellfoundJobSource
 from .cutshort import CutshortJobSource
 from .instahyre import InstahyreJobSource
 from .remotive import RemotiveJobSource
+from .arbeitnow import ArbeitnowJobSource
 
 # Registry of all connector classes
 SOURCE_REGISTRY: Dict[str, Type[BaseJobSource]] = {
     'linkedin': LinkedInJobSource,
     'remotive': RemotiveJobSource,
+    'arbeitnow': ArbeitnowJobSource,
     'naukri': NaukriJobSource,
     'indeed': IndeedJobSource,
     'foundit': FounditJobSource,
@@ -47,6 +49,7 @@ __all__ = [
     'BaseJobSource',
     'LinkedInJobSource',
     'RemotiveJobSource',
+    'ArbeitnowJobSource',
     'NaukriJobSource',
     'IndeedJobSource',
     'FounditJobSource',

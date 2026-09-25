@@ -4,19 +4,93 @@
 
 {% block content %}
 <div class="row justify-content-center py-3">
-    <div class="col-lg-9">
-        <div class="card border-0 shadow-sm rounded-4 p-4 p-sm-5 bg-white">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h3 class="fw-bold mb-1">{{ title }}</h3>
-                    <p class="text-muted small mb-0">Manually add job listing for testing and tracking</p>
+    <div class="col-lg-10">
+
+        <!-- Smart Quick Import Card (Paste URL or Paste Description) -->
+        <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white" style="border-left: 5px solid #0d6efd !important;">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 rounded-pill small">
+                        <i class="bi bi-magic me-1"></i> Smart Auto-Fill
+                    </span>
+                    <h5 class="fw-bold mb-0 text-dark">Quick Import Job</h5>
                 </div>
-                <a href="{% url 'jobs:list' %}" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-arrow-left me-1"></i> Back to Jobs
-                </a>
+                <span class="text-muted small">Paste a URL or raw text to auto-fill the whole form</span>
             </div>
 
-            <form method="post" novalidate>
+            <!-- Tab Navigation for URL vs Text -->
+            <ul class="nav nav-pills nav-fill bg-light p-1 rounded-3 mb-3" id="importTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active py-2 fw-semibold small" id="tab-url-btn" data-bs-toggle="pill" data-bs-target="#tab-url" type="button" role="tab">
+                        <i class="bi bi-link-45deg me-1"></i> Paste Job URL (LinkedIn, Naukri, Indeed, Company Site)
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link py-2 fw-semibold small" id="tab-text-btn" data-bs-toggle="pill" data-bs-target="#tab-text" type="button" role="tab">
+                        <i class="bi bi-file-earmark-text me-1"></i> Paste Job Description Text
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="importTabContent">
+                <!-- Tab 1: Paste URL -->
+                <div class="tab-pane fade show active" id="tab-url" role="tabpanel">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0 text-muted">
+                            <i class="bi bi-globe2"></i>
+                        </span>
+                        <input type="url" id="quickUrlInput" class="form-control border-start-0 py-2" placeholder="e.g. https://www.linkedin.com/jobs/view/12345 or https://internshala.com/internship/detail/..." />
+                        <button class="btn btn-primary-custom px-4 d-inline-flex align-items-center gap-2" type="button" id="btnGrabUrl">
+                            <span class="spinner-border spinner-border-sm d-none" id="grabUrlSpinner" role="status"></span>
+                            <i class="bi bi-arrow-down-circle-fill" id="grabUrlIcon"></i>
+                            <span>Grab & Auto-Fill</span>
+                        </button>
+                    </div>
+                    <div class="form-text small mt-1">Works with LinkedIn, Internshala, Indeed, Naukri, Wellfound, Greenhouse, Lever, and standard company career pages.</div>
+                </div>
+
+                <!-- Tab 2: Paste Description Text -->
+                <div class="tab-pane fade" id="tab-text" role="tabpanel">
+                    <div class="mb-2">
+                        <textarea id="quickTextInput" class="form-control" rows="4" placeholder="Paste the complete job description, requirements, or social media job post text here..."></textarea>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <button class="btn btn-primary-custom px-4 d-inline-flex align-items-center gap-2" type="button" id="btnExtractText">
+                            <span class="spinner-border spinner-border-sm d-none" id="extractTextSpinner" role="status"></span>
+                            <i class="bi bi-cpu-fill" id="extractTextIcon"></i>
+                            <span>Parse & Auto-Fill</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status / Alert Box -->
+            <div id="extractStatusBox" class="mt-3 d-none"></div>
+        </div>
+
+        <!-- Main Form Card -->
+        <div class="card border-0 shadow-sm rounded-4 p-4 p-sm-5 bg-white">
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                <div>
+                    <h3 class="fw-bold mb-1">{{ title }}</h3>
+                    <p class="text-muted small mb-0">Review details and save to your tracked database</p>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1" id="btnCheckDuplicateManual" title="Check if this job already exists in your database">
+                        <span class="spinner-border spinner-border-sm d-none" id="checkDupSpinner" role="status"></span>
+                        <i class="bi bi-shield-check text-primary" id="checkDupIcon"></i>
+                        <span>Check Duplicate</span>
+                    </button>
+                    <a href="{% url 'jobs:list' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i> Back to Jobs
+                    </a>
+                </div>
+            </div>
+
+            <!-- Live Duplicate Alert Container -->
+            <div id="duplicateAlertBox" class="mb-4 d-none"></div>
+
+            <form method="post" id="jobForm" novalidate>
                 {% csrf_token %}
 
                 <!-- Basic Information -->
@@ -93,7 +167,7 @@
                 <div class="mb-3">
                     <label class="form-label small fw-semibold text-muted">Required Skills (Comma-separated)</label>
                     {{ form.skills }}
-                    <div class="form-text small">e.g. Python, Django, PostgreSQL, Docker, AWS, React, PySpark</div>
+                    <div class="form-text small">e.g. Python, SQL, Apache Spark, Databricks, Kafka, Azure, Snowflake</div>
                 </div>
 
                 <!-- External URL -->
@@ -137,4 +211,321 @@
         </div>
     </div>
 </div>
+
+<!-- JavaScript for Asynchronous Job Extraction and Auto-Fill -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const btnGrabUrl = document.getElementById('btnGrabUrl');
+    const btnExtractText = document.getElementById('btnExtractText');
+    const quickUrlInput = document.getElementById('quickUrlInput');
+    const quickTextInput = document.getElementById('quickTextInput');
+    const statusBox = document.getElementById('extractStatusBox');
+    const duplicateAlertBox = document.getElementById('duplicateAlertBox');
+
+    const grabUrlSpinner = document.getElementById('grabUrlSpinner');
+    const grabUrlIcon = document.getElementById('grabUrlIcon');
+    const extractTextSpinner = document.getElementById('extractTextSpinner');
+    const extractTextIcon = document.getElementById('extractTextIcon');
+
+    const btnCheckDuplicateManual = document.getElementById('btnCheckDuplicateManual');
+    const checkDupSpinner = document.getElementById('checkDupSpinner');
+    const checkDupIcon = document.getElementById('checkDupIcon');
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken') || document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+
+    function showStatus(message, type = 'info') {
+        statusBox.className = `alert alert-${type} py-2 px-3 small rounded-3 d-flex align-items-center gap-2 mt-3`;
+        let icon = type === 'success' ? 'bi-check-circle-fill' : (type === 'danger' ? 'bi-exclamation-triangle-fill' : (type === 'warning' ? 'bi-exclamation-circle-fill' : 'bi-info-circle-fill'));
+        statusBox.innerHTML = `<i class="bi ${icon}"></i> <span>${message}</span>`;
+        statusBox.classList.remove('d-none');
+    }
+
+    function renderDuplicateAlert(dup) {
+        if (!duplicateAlertBox) return;
+
+        if (dup && dup.is_duplicate) {
+            duplicateAlertBox.innerHTML = `
+                <div class="alert alert-warning border border-warning shadow-sm rounded-4 p-3 mb-0">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="rounded-circle bg-warning bg-opacity-25 p-2 text-warning d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; min-width: 44px;">
+                            <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <h6 class="fw-bold text-dark mb-0">⚠️ Duplicate Job Listing Detected in Database!</h6>
+                                <span class="badge bg-warning text-dark px-2 py-1">Already in Database</span>
+                            </div>
+                            <p class="small text-muted mb-2 mt-1">
+                                This job already exists as <strong>Job #${dup.job_id}: ${dup.title}</strong> at <strong>${dup.company_name}</strong> (${dup.location || 'Location not specified'}).
+                            </p>
+                            <div class="d-flex align-items-center flex-wrap gap-2">
+                                <a href="${dup.detail_url}" target="_blank" class="btn btn-sm btn-warning text-dark fw-bold px-3">
+                                    <i class="bi bi-box-arrow-up-right me-1"></i> Open Existing Job #${dup.job_id}
+                                </a>
+                                <span class="small text-muted">You can review the existing record or proceed to save an updated version.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            duplicateAlertBox.classList.remove('d-none');
+        } else if (dup && !dup.is_duplicate) {
+            duplicateAlertBox.innerHTML = `
+                <div class="alert alert-success border border-success-subtle shadow-sm rounded-4 p-3 mb-0">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle bg-success bg-opacity-10 p-2 text-success d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; min-width: 38px;">
+                            <i class="bi bi-check-circle-fill fs-5"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <strong class="d-block text-success">✅ Fresh Job Listing — No Duplicate Found</strong>
+                            <span class="small text-muted">No matching company or job title was found in your tracked database. This is a new opportunity ready to save!</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            duplicateAlertBox.classList.remove('d-none');
+        } else {
+            duplicateAlertBox.classList.add('d-none');
+            duplicateAlertBox.innerHTML = '';
+        }
+    }
+
+    function checkDuplicateLive(showSpinner = false) {
+        const titleEl = document.getElementById('id_title');
+        const companyEl = document.getElementById('id_company_name');
+        const locEl = document.getElementById('id_location');
+        const urlEl = document.getElementById('id_external_url');
+
+        const title = titleEl ? titleEl.value.trim() : '';
+        const company = companyEl ? companyEl.value.trim() : '';
+        const location = locEl ? locEl.value.trim() : '';
+        const url = urlEl ? urlEl.value.trim() : '';
+
+        if (!title && !company && !url) {
+            if (showSpinner) {
+                showStatus('Please enter at least a Job Title or Company Name to check.', 'warning');
+            }
+            return;
+        }
+
+        if (showSpinner && checkDupSpinner && checkDupIcon) {
+            checkDupSpinner.classList.remove('d-none');
+            checkDupIcon.classList.add('d-none');
+            if (btnCheckDuplicateManual) btnCheckDuplicateManual.disabled = true;
+        }
+
+        fetch("{% url 'jobs:check_duplicate' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({
+                title: title,
+                company_name: company,
+                location: location,
+                external_url: url
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success && data.duplicate) {
+                renderDuplicateAlert(data.duplicate);
+                if (showSpinner) {
+                    if (data.duplicate.is_duplicate) {
+                        showStatus(`⚠️ Duplicate found: Job #${data.duplicate.job_id} (${data.duplicate.title} at ${data.duplicate.company_name}).`, 'warning');
+                    } else {
+                        showStatus('✅ Fresh job listing! No duplicate detected in your database.', 'success');
+                    }
+                }
+            }
+        })
+        .catch(err => {
+            console.error('Error checking duplicate:', err);
+        })
+        .finally(() => {
+            if (showSpinner && checkDupSpinner && checkDupIcon) {
+                checkDupSpinner.classList.add('d-none');
+                checkDupIcon.classList.remove('d-none');
+                if (btnCheckDuplicateManual) btnCheckDuplicateManual.disabled = false;
+            }
+        });
+    }
+
+    function populateForm(data) {
+        let filledCount = 0;
+
+        function setVal(elementId, val) {
+            const el = document.getElementById(elementId);
+            if (el && val !== undefined && val !== null && val !== '') {
+                el.value = val;
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+                el.classList.add('bg-success-subtle');
+                setTimeout(() => el.classList.remove('bg-success-subtle'), 2000);
+                filledCount++;
+            }
+        }
+
+        if (data.title) setVal('id_title', data.title);
+        if (data.company_name) setVal('id_company_name', data.company_name);
+        if (data.location) setVal('id_location', data.location);
+        if (data.work_mode) setVal('id_work_mode', data.work_mode);
+        if (data.employment_type) setVal('id_employment_type', data.employment_type);
+        if (data.skills) setVal('id_skills', data.skills);
+        if (data.experience_min !== undefined) setVal('id_experience_min', data.experience_min);
+        if (data.experience_max !== undefined) setVal('id_experience_max', data.experience_max);
+        if (data.salary_text) setVal('id_salary_text', data.salary_text);
+        if (data.external_url) setVal('id_external_url', data.external_url);
+        if (data.source) setVal('id_source', data.source);
+        if (data.source_job_id) setVal('id_source_job_id', data.source_job_id);
+        if (data.description) setVal('id_description', data.description);
+        if (data.responsibilities) setVal('id_responsibilities', data.responsibilities);
+        if (data.requirements) setVal('id_requirements', data.requirements);
+
+        // Render duplicate status banner
+        if (data.duplicate) {
+            renderDuplicateAlert(data.duplicate);
+        }
+
+        if (data.is_duplicate) {
+            showStatus(`Auto-filled details for <strong>${data.title || 'Job'}</strong> at <strong>${data.company_name || 'Company'}</strong>. <br>⚠️ <strong>Notice:</strong> This job is already recorded in your database (Job #${data.duplicate.job_id}). Review below.`, 'warning');
+        } else {
+            showStatus(`Success! Extracted clean details for <strong>${data.title || 'Job'}</strong> at <strong>${data.company_name || 'Company'}</strong>. ✅ Fresh listing (No duplicate found). Review and save.`, 'success');
+        }
+
+        // Smooth scroll to form
+        const formEl = document.getElementById('jobForm');
+        if (formEl) {
+            formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    // Grab from URL
+    if (btnGrabUrl) {
+        btnGrabUrl.addEventListener('click', function() {
+            const url = quickUrlInput.value.trim();
+            if (!url) {
+                showStatus('Please paste a job URL first.', 'warning');
+                quickUrlInput.focus();
+                return;
+            }
+
+            grabUrlSpinner.classList.remove('d-none');
+            grabUrlIcon.classList.add('d-none');
+            btnGrabUrl.disabled = true;
+            showStatus('Connecting to URL and extracting structured job details...', 'info');
+
+            fetch("{% url 'jobs:extract' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({ mode: 'url', url: url })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.data) {
+                    populateForm(data.data);
+                } else {
+                    showStatus(data.error || 'Could not parse job from this URL. Please verify the link or try pasting the job description text.', 'danger');
+                }
+            })
+            .catch(err => {
+                showStatus('Network error while fetching job details. Please try pasting the job description text instead.', 'danger');
+            })
+            .finally(() => {
+                grabUrlSpinner.classList.add('d-none');
+                grabUrlIcon.classList.remove('d-none');
+                btnGrabUrl.disabled = false;
+            });
+        });
+    }
+
+    // Extract from Text
+    if (btnExtractText) {
+        btnExtractText.addEventListener('click', function() {
+            const text = quickTextInput.value.trim();
+            if (!text) {
+                showStatus('Please paste job description text first.', 'warning');
+                quickTextInput.focus();
+                return;
+            }
+
+            extractTextSpinner.classList.remove('d-none');
+            extractTextIcon.classList.add('d-none');
+            btnExtractText.disabled = true;
+            showStatus('Analyzing and formatting job description text...', 'info');
+
+            fetch("{% url 'jobs:extract' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({ mode: 'text', text: text })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.data) {
+                    populateForm(data.data);
+                } else {
+                    showStatus(data.error || 'Failed to extract attributes from text.', 'danger');
+                }
+            })
+            .catch(err => {
+                showStatus('Error analyzing text.', 'danger');
+            })
+            .finally(() => {
+                extractTextSpinner.classList.add('d-none');
+                extractTextIcon.classList.remove('d-none');
+                btnExtractText.disabled = false;
+            });
+        });
+    }
+
+    // Manual Duplicate Check Button
+    if (btnCheckDuplicateManual) {
+        btnCheckDuplicateManual.addEventListener('click', function() {
+            checkDuplicateLive(true);
+        });
+    }
+
+    // Auto-check duplicate on blur when title or company finishes being edited
+    let debounceTimer = null;
+    function triggerDebouncedCheck() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            const t = document.getElementById('id_title')?.value.trim();
+            const c = document.getElementById('id_company_name')?.value.trim();
+            if (t && c) {
+                checkDuplicateLive(false);
+            }
+        }, 500);
+    }
+
+    const titleInput = document.getElementById('id_title');
+    const companyInput = document.getElementById('id_company_name');
+    if (titleInput) {
+        titleInput.addEventListener('blur', triggerDebouncedCheck);
+    }
+    if (companyInput) {
+        companyInput.addEventListener('blur', triggerDebouncedCheck);
+    }
+});
+</script>
 {% endblock %}

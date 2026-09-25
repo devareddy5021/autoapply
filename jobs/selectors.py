@@ -18,6 +18,35 @@ SORT_ALLOWED_MAPPING = {
     'posted': '-posted_at',
 }
 
+# User-prioritized Data & AI Roles (Main First, followed by other tech roles)
+PRIORITIZED_ROLE_KEYWORDS = [
+    'data engineer',
+    'ai data engineer',
+    'data platform engineer',
+    'cloud data engineer',
+    'data architect',
+    'mlops',
+    'data security engineer',
+    'data governance',
+    'data quality',
+    'ai/ml',
+    'data scientist',
+    'analytics engineer',
+    'decision scientist',
+    'operations research',
+    'knowledge engineer',
+    'data annotation',
+    'data labeling',
+]
+
+def get_role_priority(title: str) -> int:
+    """Returns priority rank (0 is highest, 999 for next/others)."""
+    t = (title or '').lower()
+    for idx, kw in enumerate(PRIORITIZED_ROLE_KEYWORDS):
+        if kw in t:
+            return idx
+    return 999
+
 def get_job_by_id(job_id: int) -> Optional[Job]:
     """Retrieves a single Job by primary key, or None if not found."""
     return Job.objects.filter(pk=job_id).first()
@@ -87,7 +116,8 @@ def filter_and_search_jobs(
     experience: str = '',
     date_range: str = '',
     show_ignored: bool = False,
-    sort_by: str = 'newest'
+    sort_by: str = 'newest',
+    authenticity: str = ''
 ) -> List[Dict[str, Any]]:
     """
     Core selector for filtering, searching, and sorting jobs.
@@ -95,6 +125,7 @@ def filter_and_search_jobs(
     - Active jobs
     - India OR Remote opportunities
     - Category filtering when selected
+    - Authenticity / Fake / Agency filtering
     """
     qs = Job.objects.filter(is_active=True).filter(
         Q(is_india=True) | Q(is_remote=True)
@@ -147,30 +178,60 @@ def filter_and_search_jobs(
     # Years of experience filter
     if experience:
         exp_clean = experience.strip().lower()
-        if exp_clean in ('0-2', 'entry', 'junior'):
-            qs = qs.filter(experience_min__lte=2.0)
+        senior_title_pattern = r'\b(senior|sr\b|sr\.|lead|principal|architect|staff|manager|director|head|iii\b|level[\s\-_]*3|sde[\s\-_]*3|developer[\s\-_]*3|ii\b|level[\s\-_]*2|sde[\s\-_]*2)\b'
+        if exp_clean in ('0-2', '0-1', 'entry', 'junior', 'fresher', 'intern'):
+            max_limit = 1.5 if exp_clean == '0-1' else 2.5
+            qs = qs.filter(
+                experience_min__lte=2.0
+            ).filter(
+                Q(experience_max__lte=max_limit) | Q(experience_max__isnull=True, experience_min__lte=1.0)
+            ).exclude(
+                Q(title__iregex=senior_title_pattern)
+            )
+        elif exp_clean in ('1-3',):
+            qs = qs.filter(
+                Q(experience_min__lte=2.5) &
+                (Q(experience_max__lte=4.0) | Q(experience_max__isnull=True))
+            ).exclude(
+                Q(title__iregex=r'\b(senior|sr\b|sr\.|lead|principal|architect|staff|manager|director|head|iii\b)\b')
+            )
         elif exp_clean in ('3-5', 'mid'):
             qs = qs.filter(
-                Q(experience_min__gte=2.0, experience_min__lte=5.0) |
-                Q(experience_max__gte=3.0, experience_min__lte=3.5)
+                (Q(experience_min__gte=2.0, experience_min__lte=5.5) | Q(experience_max__gte=3.0, experience_max__lte=6.0)) &
+                ~Q(title__iregex=r'\b(principal|architect|director|head|staff|lead)\b')
             )
         elif exp_clean in ('5-8', 'senior'):
             qs = qs.filter(
-                Q(experience_min__gte=4.5, experience_min__lte=8.5) |
-                Q(experience_max__gte=5.0, experience_min__lte=5.5)
+                Q(experience_min__gte=4.0, experience_min__lte=8.5) |
+                Q(experience_max__gte=5.0, experience_max__lte=9.0) |
+                Q(title__iregex=r'\b(senior|sr\b|sr\.|iii\b|level[\s\-_]*3|sde[\s\-_]*3)\b')
             )
         elif exp_clean in ('8+', 'lead', 'staff', 'principal'):
-            qs = qs.filter(experience_min__gte=7.5)
+            qs = qs.filter(
+                Q(experience_min__gte=7.5) |
+                Q(experience_max__gte=8.0) |
+                Q(title__iregex=r'\b(lead|staff|principal|architect|director|head|manager)\b')
+            )
         else:
-            try:
-                exp_num = float(exp_clean)
+            range_m = re.match(r'^(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)$', exp_clean)
+            if range_m:
+                r_low = float(range_m.group(1))
+                r_high = float(range_m.group(2))
                 qs = qs.filter(
-                    Q(experience_min__lte=exp_num) &
-                    (Q(experience_max__gte=exp_num) | Q(experience_max__isnull=True) | Q(experience_max=0))
+                    Q(experience_min__lte=r_high) &
+                    (Q(experience_max__gte=r_low) | Q(experience_max__isnull=True))
                 )
-            except ValueError:
-                pass
-
+                if r_high <= 2.5:
+                    qs = qs.exclude(Q(title__iregex=senior_title_pattern))
+            else:
+                try:
+                    exp_num = float(exp_clean)
+                    qs = qs.filter(
+                        Q(experience_min__lte=exp_num) &
+                        (Q(experience_max__gte=exp_num) | Q(experience_max__isnull=True) | Q(experience_max=0))
+                    )
+                except ValueError:
+                    pass
 
     # Date posted/discovered filter
     now = timezone.now()
@@ -199,6 +260,15 @@ def filter_and_search_jobs(
     items: List[Dict[str, Any]] = []
 
     for job in qs:
+        # Authenticity / Fake / Agency filter
+        auth_info = job.authenticity_info
+        if authenticity == 'verified' and not auth_info.get('is_verified'):
+            continue
+        elif authenticity == 'direct' and (auth_info.get('is_third_party') or auth_info.get('is_suspicious')):
+            continue
+        elif authenticity == 'no_suspicious' and auth_info.get('is_suspicious'):
+            continue
+
         uj = user_jobs_map.get(job.id)
 
         # Ignore filter
@@ -250,19 +320,20 @@ def filter_and_search_jobs(
             'is_saved': is_saved,
             'is_ignored': is_ignored,
             'user_job': uj,
+            'authenticity': auth_info,
         })
 
-    # Sorting using safe allowed-list mapping
+    # Sorting with Prioritized Target Roles First (Main First, followed by other roles)
     if sort_by == 'match':
-        items.sort(key=lambda x: x['score'], reverse=True)
+        items.sort(key=lambda x: (-x['score'], get_role_priority(x['job'].title), -x['job'].discovered_at.timestamp()))
     elif sort_by == 'oldest':
-        items.sort(key=lambda x: x['job'].discovered_at)
+        items.sort(key=lambda x: (get_role_priority(x['job'].title), x['job'].discovered_at.timestamp()))
     elif sort_by == 'company_asc':
         items.sort(key=lambda x: (x['job'].company_name or '').lower())
     elif sort_by == 'company_desc':
         items.sort(key=lambda x: (x['job'].company_name or '').lower(), reverse=True)
     else:  # default 'newest'
-        items.sort(key=lambda x: x['job'].discovered_at, reverse=True)
+        items.sort(key=lambda x: (get_role_priority(x['job'].title), -x['job'].discovered_at.timestamp()))
 
     return items
 

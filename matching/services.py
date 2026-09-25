@@ -1,5 +1,8 @@
 import re
+import math
+from collections import Counter
 from typing import Dict, Any, List, Optional
+from resumes.services import COMMON_TECH_SKILLS
 
 # Configurable matching weights (Section 9)
 MATCH_WEIGHTS = {
@@ -10,31 +13,116 @@ MATCH_WEIGHTS = {
     'experience': 10,
 }
 
+STOPWORDS = {
+    'a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and', 'any', 'are', 'aren',
+    'as', 'at', 'be', 'because', 'been', 'before', 'being', 'below', 'between', 'both', 'but', 'by',
+    'can', 'could', 'did', 'do', 'does', 'doing', 'down', 'during', 'each', 'few', 'for', 'from',
+    'further', 'had', 'has', 'have', 'having', 'he', 'her', 'here', 'hers', 'herself', 'him', 'himself',
+    'his', 'how', 'i', 'if', 'in', 'into', 'is', 'it', 'its', 'itself', 'just', 'me', 'more', 'most',
+    'my', 'myself', 'no', 'nor', 'not', 'now', 'of', 'off', 'on', 'once', 'only', 'or', 'other', 'our',
+    'ours', 'ourselves', 'out', 'over', 'own', 'same', 'she', 'should', 'so', 'some', 'such', 'than',
+    'that', 'the', 'their', 'theirs', 'them', 'themselves', 'then', 'there', 'these', 'they', 'this',
+    'those', 'through', 'to', 'too', 'under', 'until', 'up', 'very', 'was', 'we', 'were', 'what', 'when',
+    'where', 'which', 'while', 'who', 'whom', 'why', 'with', 'would', 'you', 'your', 'yours', 'yourself',
+    'yourselves', 'will', 'must', 'candidate', 'experience', 'years', 'working', 'ability', 'required'
+}
+
+def tokenize_text(text: str) -> List[str]:
+    """Extracts cleaned words excluding common stopwords."""
+    tokens = re.findall(r'[a-zA-Z0-9_\+\#\.\-]+', (text or '').lower())
+    return [t for t in tokens if len(t) > 1 and t not in STOPWORDS]
+
+def extract_tech_entities(text: str) -> List[str]:
+    """Extracts known tech skills and frameworks from arbitrary text."""
+    text_lower = (text or '').lower()
+    entities = []
+    for skill in COMMON_TECH_SKILLS:
+        pattern = r'\b' + re.escape(skill) + r'\b'
+        if re.search(pattern, text_lower):
+            entities.append(skill.title() if len(skill) > 3 else skill.upper())
+    return sorted(list(set(entities)))
+
+def compute_cosine_similarity(tokens1: List[str], tokens2: List[str]) -> float:
+    """Calculates cosine similarity between two token frequency distributions."""
+    if not tokens1 or not tokens2:
+        return 0.0
+    vec1 = Counter(tokens1)
+    vec2 = Counter(tokens2)
+    intersection = set(vec1.keys()) & set(vec2.keys())
+    numerator = sum([vec1[x] * vec2[x] for x in intersection])
+    sum1 = sum([val**2 for val in vec1.values()])
+    sum2 = sum([val**2 for val in vec2.values()])
+    denominator = math.sqrt(sum1) * math.sqrt(sum2)
+    if not denominator:
+        return 0.0
+    return float(numerator) / denominator
+
+def compute_full_resume_match(job_full_text: str, resume_text: str, job_skills: Optional[List[str]] = None) -> Dict[str, Any]:
+    """
+    Analyzes the complete extracted resume text against the entire job description text.
+    Extracts matched technologies, identifies missing requirements, and calculates
+    cosine vector similarity and project alignment.
+    """
+    if not resume_text:
+        return {
+            'has_resume': False,
+            'score': 0,
+            'fit_level': 'No Resume Uploaded',
+            'matched_keywords': [],
+            'missing_keywords': job_skills or [],
+            'overlap_count': 0,
+            'cosine_similarity': 0.0,
+            'advice': 'Upload your PDF resume to unlock automated project & tech-stack analysis.'
+        }
+
+    job_tokens = tokenize_text(job_full_text)
+    resume_tokens = tokenize_text(resume_text)
+    cosine_sim = compute_cosine_similarity(job_tokens, resume_tokens)
+
+    # Detect skills in both texts
+    job_entities = set(extract_tech_entities(job_full_text))
+    if job_skills:
+        for js in job_skills:
+            job_entities.add(js.title() if len(js) > 3 else js.upper())
+    resume_entities = set(extract_tech_entities(resume_text))
+
+    matched_keywords = sorted(list(job_entities.intersection(resume_entities)))
+    missing_keywords = sorted(list(job_entities.difference(resume_entities)))
+
+    entity_ratio = (len(matched_keywords) / len(job_entities)) if job_entities else 0.5
+    cosine_scaled = min(1.0, cosine_sim * 2.5)
+    resume_score = int(round((entity_ratio * 0.65 + cosine_scaled * 0.35) * 100))
+    resume_score = max(5, min(100, resume_score))
+
+    if resume_score >= 75:
+        fit_level = "High Fit"
+    elif resume_score >= 50:
+        fit_level = "Good Fit"
+    elif resume_score >= 30:
+        fit_level = "Moderate Fit"
+    else:
+        fit_level = "Low Fit"
+
+    advice = []
+    if matched_keywords:
+        advice.append(f"Highlight your experience with {', '.join(matched_keywords[:3])} in your interview.")
+    if missing_keywords:
+        advice.append(f"Consider emphasizing or adding {', '.join(missing_keywords[:3])} to your resume.")
+
+    return {
+        'has_resume': True,
+        'score': resume_score,
+        'fit_level': fit_level,
+        'matched_keywords': matched_keywords,
+        'missing_keywords': missing_keywords,
+        'overlap_count': len(matched_keywords),
+        'cosine_similarity': round(cosine_sim, 3),
+        'advice': ' '.join(advice)
+    }
+
 def calculate_match_score(job, profile, default_resume=None) -> Dict[str, Any]:
     """
-    Deterministic, explainable matching engine comparing a Job against a User's Profile & Resume.
-    
-    Weights (Configurable):
-    - Title match: 30 pts
-    - Skills match: 40 pts
-    - Location match: 10 pts
-    - Work mode match: 10 pts
-    - Experience match: 10 pts
-    Total: 100 pts
-
-    Returns:
-    {
-        "score": 82,
-        "reasons": [
-            "Python matches target skills",
-            "SQL matches target skills",
-            "Bengaluru matches preferred location"
-        ],
-        "missing_skills": [
-            "Airflow"
-        ],
-        "breakdown": { ... }
-    }
+    Deterministic, explainable matching engine comparing a Job against a User's Profile & Full Resume.
     """
     if not profile:
         return {
@@ -44,6 +132,7 @@ def calculate_match_score(job, profile, default_resume=None) -> Dict[str, Any]:
             'missing_skills': job.skills_list,
             'matched_skills': [],
             'breakdown': {},
+            'resume_analysis': compute_full_resume_match("", ""),
             'role': {'score': 0, 'max_score': MATCH_WEIGHTS['title'], 'details': 'No profile configured', 'matched': []},
             'skills': {'score': 0, 'max_score': MATCH_WEIGHTS['skills'], 'matched': [], 'missing': job.skills_list, 'details': 'No profile configured'},
             'location': {'score': 0, 'max_score': MATCH_WEIGHTS['location'], 'details': 'No profile configured'},
@@ -56,7 +145,12 @@ def calculate_match_score(job, profile, default_resume=None) -> Dict[str, Any]:
     missing_skills: List[str] = []
     matched_skills: List[str] = []
 
-    # 1. Title Match (30 pts)
+    # 1. Full Resume Analysis
+    job_full_text = f"{job.title} {job.company_name} {job.skills} {job.description} {getattr(job, 'requirements', '') or ''}"
+    resume_text = default_resume.extracted_text if (default_resume and getattr(default_resume, 'extracted_text', None)) else ""
+    resume_analysis = compute_full_resume_match(job_full_text, resume_text, job.skills_list)
+
+    # 2. Title Match (30 pts)
     title_max = MATCH_WEIGHTS['title']
     title_score = 0
     title_details = "Job title does not match preferred titles"
@@ -89,10 +183,13 @@ def calculate_match_score(job, profile, default_resume=None) -> Dict[str, Any]:
         title_score = int(title_max * 0.5)
         title_details = "No target roles configured (baseline applied)"
 
-    # 2. Skills Match (40 pts)
+    # 3. Skills & Full Resume Tech Match (40 pts)
     skills_max = MATCH_WEIGHTS['skills']
     profile_skills = set(s.lower().strip() for s in profile.skills_list if s.strip())
     resume_skills = set(s.lower().strip() for s in (default_resume.detected_skills if default_resume else []))
+    if resume_text:
+        for ent in resume_analysis['matched_keywords']:
+            resume_skills.add(ent.lower().strip())
     all_user_skills = profile_skills.union(resume_skills)
 
     job_skills = [s.strip() for s in job.skills_list if s.strip()]
@@ -120,7 +217,10 @@ def calculate_match_score(job, profile, default_resume=None) -> Dict[str, Any]:
         skill_score = int(skills_max * 0.6)
         skill_details = "No specific skills listed for job (baseline score)"
 
-    # 3. Location Match (10 pts)
+    if resume_analysis.get('has_resume') and resume_analysis.get('matched_keywords'):
+        reasons.append(f"Full resume projects confirm: {', '.join(resume_analysis['matched_keywords'][:3])}")
+
+    # 4. Location Match (10 pts)
     loc_max = MATCH_WEIGHTS['location']
     loc_score = 0
     job_loc_lower = (job.location or '').lower()
@@ -147,7 +247,7 @@ def calculate_match_score(job, profile, default_resume=None) -> Dict[str, Any]:
         loc_score = 0
         loc_details = f"Job location ({job.location}) does not match preferred locations"
 
-    # 4. Work Mode Match (10 pts)
+    # 5. Work Mode Match (10 pts)
     mode_max = MATCH_WEIGHTS['work_mode']
     mode_score = 0
     user_pref = profile.work_preference
@@ -171,7 +271,7 @@ def calculate_match_score(job, profile, default_resume=None) -> Dict[str, Any]:
         mode_score = int(mode_max * 0.5)
         mode_details = f"Work style is {job.get_work_mode_display()}"
 
-    # 5. Experience Match (10 pts)
+    # 6. Experience Match (10 pts)
     exp_max = MATCH_WEIGHTS['experience']
     exp_score = 0
     user_exp = float(profile.years_of_experience or 0.0)
@@ -200,15 +300,24 @@ def calculate_match_score(job, profile, default_resume=None) -> Dict[str, Any]:
         'location': {'score': loc_score, 'max': loc_max, 'details': loc_details},
         'work_mode': {'score': mode_score, 'max': mode_max, 'details': mode_details},
         'experience': {'score': exp_score, 'max': exp_max, 'details': exp_details},
+        'resume': {
+            'score': resume_analysis['score'],
+            'has_resume': resume_analysis['has_resume'],
+            'fit_level': resume_analysis['fit_level'],
+            'matched': resume_analysis['matched_keywords'],
+            'missing': resume_analysis['missing_keywords'],
+            'details': resume_analysis['advice'] or f"Resume match: {resume_analysis['fit_level']}"
+        }
     }
 
     return {
         'score': total_score,
-        'total_score': total_score,  # Alias for backward compatibility
+        'total_score': total_score,
         'reasons': reasons,
         'missing_skills': missing_skills,
         'matched_skills': matched_skills,
         'breakdown': breakdown,
+        'resume_analysis': resume_analysis,
         # Legacy template compatibility keys
         'role': {'score': title_score, 'max_score': title_max, 'details': title_details, 'matched': matched_roles},
         'skills_score_info': {'score': skill_score, 'max_score': skills_max, 'matched': matched_skills, 'missing': missing_skills, 'details': skill_details},
@@ -217,3 +326,4 @@ def calculate_match_score(job, profile, default_resume=None) -> Dict[str, Any]:
         'experience': {'score': exp_score, 'max_score': exp_max, 'details': exp_details},
         'salary': {'score': 10, 'max_score': 10, 'details': job.formatted_salary},
     }
+

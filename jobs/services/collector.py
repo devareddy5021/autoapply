@@ -32,27 +32,37 @@ from matching.services import calculate_match_score
 
 logger = logging.getLogger(__name__)
 
-# Configurable Search Queries - Prioritizing Students, Freshers & Entry-Level Tech Roles
+# Prioritized Data & AI Roles (Main First, followed by other tech roles)
+PRIORITIZED_TARGET_ROLES = [
+    'Data Engineer',
+    'AI Data Engineer',
+    'Data Platform Engineer',
+    'Cloud Data Engineer',
+    'Data Architect',
+    'MLOps Engineer',
+    'Data Security Engineer',
+    'Data Governance Engineer',
+    'Data Quality Engineer',
+    'AI/ML Engineer',
+    'Data Scientist',
+    'Analytics Engineer',
+    'Decision Scientist',
+    'Operations Research Analyst',
+    'AI Data & Knowledge Engineer',
+    'Data Annotation Specialist',
+    'AI Data Labeling Specialist',
+]
+
 DEFAULT_DATA_QUERIES = getattr(
     settings,
     'JOB_AGGREGATOR_QUERIES',
-    [
-        'Internship',
-        'Machine Learning Intern',
-        'Data Engineering Intern',
-        'Software Engineer Intern',
-        'Python Intern',
-        'Graduate Engineer Trainee',
-        'Fresher Software Engineer',
-        'Junior Python Developer',
-        'Junior Data Analyst',
-        'Junior Data Engineer',
-        'Associate Software Engineer',
-        'Data Engineer',
+    PRIORITIZED_TARGET_ROLES + [
         'Software Engineer',
         'Python Developer',
         'Full Stack Developer',
-        'Data Analyst',
+        'Internship',
+        'Data Engineering Intern',
+        'Machine Learning Intern',
     ]
 )
 

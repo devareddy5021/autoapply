@@ -49,50 +49,65 @@ ROLE_DEFINITIONS: List[Tuple[str, List[str], List[str]]] = [
         JobCategory.DATA_ENGINEERING,
         [
             r'\bdata engineer(ing)?\b',
+            r'\bai data engineer\b',
+            r'\bdata platform engineer\b',
+            r'\bcloud data engineer\b',
+            r'\bdata architect\b',
+            r'\bdata security engineer\b',
+            r'\bdata governance engineer\b',
+            r'\bdata quality engineer\b',
+            r'\banalytics engineer\b',
+            r'\bai data (&|and) knowledge engineer\b',
+            r'\bknowledge engineer\b',
             r'\betl developer\b',
             r'\betl engineer\b',
             r'\bbig data engineer\b',
-            r'\bcloud data engineer\b',
             r'\bazure data engineer\b',
             r'\baws data engineer\b',
             r'\bgcp data engineer\b',
             r'\bdatabricks engineer\b',
             r'\bspark engineer\b',
-            r'\bdata platform engineer\b',
-            r'\banalytics engineer\b',
             r'\bdata pipeline\b',
             r'\bdata infrastructure\b',
         ],
-        ['spark', 'pyspark', 'databricks', 'etl', 'airflow', 'kafka', 'hadoop', 'snowflake', 'dbt', 'data lake', 'pipeline']
+        ['spark', 'pyspark', 'databricks', 'etl', 'airflow', 'kafka', 'hadoop', 'snowflake', 'dbt', 'data lake', 'pipeline', 'data governance', 'data quality', 'data architect']
     ),
     (
         JobCategory.MACHINE_LEARNING,
         [
             r'\bmachine learning\b',
-            r'\bml engineer\b',
+            r'\bmlops\b',
+            r'\bmlops engineer\b',
             r'\bai/ml\b',
+            r'\bai/ml engineer\b',
             r'\bml/ai\b',
+            r'\bml/ai engineer\b',
+            r'\bml engineer\b',
             r'\bai engineer\b',
+            r'\bdata annotation\b',
+            r'\bai data labeling\b',
+            r'\bdata labeling\b',
             r'\bapplied scientist\b',
             r'\bdeep learning\b',
             r'\bnlp engineer\b',
             r'\bcomputer vision engineer\b',
             r'\bllm engineer\b',
-            r'\bmlops\b',
         ],
-        ['pytorch', 'tensorflow', 'scikit-learn', 'deep learning', 'nlp', 'computer vision', 'llm', 'mlops', 'model deployment']
+        ['pytorch', 'tensorflow', 'scikit-learn', 'deep learning', 'nlp', 'computer vision', 'llm', 'mlops', 'model deployment', 'annotation', 'data labeling']
     ),
     (
         JobCategory.DATA_SCIENCE,
         [
             r'\bdata scientist\b',
             r'\bdata science\b',
-            r'\bapplied data scientist\b',
             r'\bdecision scientist\b',
+            r'\boperations research\b',
+            r'\boperations research analyst\b',
+            r'\bapplied data scientist\b',
             r'\bquantitative analyst\b',
             r'\bquant analyst\b',
         ],
-        ['pandas', 'numpy', 'statistics', 'predictive modeling', 'machine learning', 'hypothesis testing', 'python', 'r']
+        ['pandas', 'numpy', 'statistics', 'predictive modeling', 'machine learning', 'hypothesis testing', 'python', 'r', 'operations research', 'optimization']
     ),
     (
         JobCategory.BI,
@@ -270,53 +285,86 @@ def parse_experience_requirements(title: str, text: str = '') -> Tuple[float, Op
       - '3 - 5 years of experience' -> (3.0, 5.0)
       - '5+ years' -> (5.0, 8.0)
       - 'at least 2 years' -> (2.0, 5.0)
-    Falls back to title seniority cues:
-      - 'Principal / Architect / Director' -> (8.0, 15.0)
-      - 'Lead / Staff' -> (7.0, 10.0)
-      - 'Senior' -> (5.0, 8.0)
+    Falls back to title seniority and engineering level cues:
+      - 'Principal / Architect / Director / VP' -> (8.0, 15.0)
+      - 'Lead / Staff / Manager' -> (7.0, 11.0)
+      - 'Level III / SDE III / Engineer III' -> (6.0, 9.0)
+      - 'Senior / Sr.' -> (5.0, 8.0)
+      - 'Level II / SDE II / Engineer II' -> (3.0, 6.0)
       - 'Mid / Intermediate' -> (3.0, 5.0)
       - 'Junior / Entry / Associate / Fresher' -> (0.0, 2.0)
       - 'Intern / Trainee' -> (0.0, 1.0)
     """
+    title_lower = (title or '').lower()
     combined = f"{title} {text}".lower()
 
-    # Pattern 1: Range '3 - 5 years' or '3 to 5 years'
-    range_match = re.search(r'(\d+(?:\.\d+)?)\s*(?:-|to)\s*(\d+(?:\.\d+)?)\s*years?', combined)
+    # 1. Check explicit range in text/title ('3 - 5 years', '3 to 5 yrs', etc.)
+    min_y = None
+    max_y = None
+    range_match = re.search(r'(\d+(?:\.\d+)?)\s*(?:-|to)\s*(\d+(?:\.\d+)?)\s*(?:years?|yrs)', combined)
     if range_match:
         try:
-            min_y = float(range_match.group(1))
-            max_y = float(range_match.group(2))
-            if 0 <= min_y <= 25 and min_y <= max_y <= 30:
-                return min_y, max_y
+            r_min = float(range_match.group(1))
+            r_max = float(range_match.group(2))
+            if 0 <= r_min <= 25 and r_min <= r_max <= 30:
+                min_y, max_y = r_min, r_max
         except ValueError:
             pass
 
-    # Pattern 2: 'X+ years' or 'at least X years' or 'X years of experience'
-    single_match = re.search(r'(?:at least|minimum|min|with)\s*(\d+(?:\.\d+)?)\+?\s*years?', combined)
-    if not single_match:
-        single_match = re.search(r'(\d+(?:\.\d+)?)\+?\s*years?\s*(?:of\s*)?(?:relevant|hands-on|industry|commercial|professional)?\s*experience', combined)
+    # 2. Check 'X+ years' or 'at least X years'
+    if min_y is None:
+        single_match = re.search(r'(?:at least|minimum|min|with|having)\s*(\d+(?:\.\d+)?)\+?\s*(?:years?|yrs)', combined)
+        if not single_match:
+            single_match = re.search(r'(\d+(?:\.\d+)?)\+?\s*(?:years?|yrs)\s*(?:of\s*)?(?:relevant|hands-on|industry|commercial|professional|work)?\s*experience', combined)
 
-    if single_match:
-        try:
-            val = float(single_match.group(1))
-            if 0 <= val <= 25:
-                return val, round(val + 3.0, 1)
-        except ValueError:
-            pass
+        if single_match:
+            try:
+                val = float(single_match.group(1))
+                if 0 <= val <= 25:
+                    min_y = val
+                    max_y = round(val + 3.0, 1)
+            except ValueError:
+                pass
 
-    # Title seniority heuristics
-    title_lower = title.lower()
-    if any(w in title_lower for w in ['intern', 'internship', 'trainee', 'student', 'co-op']):
-        return 0.0, 1.0
-    if any(w in title_lower for w in ['junior', 'jr.', 'jr ', 'entry', 'associate', 'fresher', 'freshers', 'graduate', 'campus']):
-        return 0.0, 2.0
-    if any(w in title_lower for w in ['principal', 'director', 'vp', 'head of', 'architect']):
-        return 8.0, 15.0
-    if any(w in title_lower for w in ['lead', 'staff', 'manager']):
-        return 7.0, 10.0
-    if any(w in title_lower for w in ['senior', 'sr.', 'sr ']):
-        return 5.0, 8.0
-    if any(w in title_lower for w in ['mid', 'intermediate']):
-        return 3.0, 5.0
+    # 3. Title seniority and level adjustments
+    is_principal = bool(re.search(r'\b(?:principal|director|vp\b|head of|architect)\b', title_lower))
+    is_lead = bool(re.search(r'\b(?:lead|staff|manager|team lead)\b', title_lower))
+    is_level_iv = bool(re.search(r'\b(?:iv\b|level[\s\-_]*4|sde[\s\-_]*4|sde[\s\-_]*iv|engineer[\s\-_]*iv|engineer[\s\-_]*4)\b', title_lower))
+    is_level_iii = bool(re.search(r'\b(?:iii\b|level[\s\-_]*3|sde[\s\-_]*3|sde[\s\-_]*iii|engineer[\s\-_]*iii|engineer[\s\-_]*3|developer[\s\-_]*iii|developer[\s\-_]*3)\b', title_lower))
+    is_senior = bool(re.search(r'\b(?:senior|sr\b|sr\.)\b', title_lower))
+    is_level_ii = bool(re.search(r'\b(?:ii\b|level[\s\-_]*2|sde[\s\-_]*2|sde[\s\-_]*ii|engineer[\s\-_]*ii|engineer[\s\-_]*2|developer[\s\-_]*ii|developer[\s\-_]*2)\b', title_lower))
+    is_mid = bool(re.search(r'\b(?:mid|intermediate)\b', title_lower))
+    is_entry = bool(re.search(r'\b(?:junior|jr\b|jr\.|entry|associate|fresher|freshers|graduate|campus)\b', title_lower))
+    is_intern = bool(re.search(r'\b(?:intern|internship|trainee|student|co-op)\b', title_lower))
 
-    return 0.0, 2.0  # Default to Fresher / Entry Level friendly in this edition
+    # Apply title seniority floor if text range extracted was for a minor secondary skill (e.g. "0-2 yrs in Docker")
+    if is_principal:
+        min_floor, max_floor = 6.0, 15.0
+    elif is_lead or is_level_iv:
+        min_floor, max_floor = 5.0, 11.0
+    elif is_level_iii:
+        min_floor, max_floor = 4.0, 9.0
+    elif is_senior:
+        min_floor, max_floor = 3.0, 8.0
+    elif is_level_ii:
+        min_floor, max_floor = 2.5, 6.0
+    elif is_mid:
+        min_floor, max_floor = 2.5, 5.0
+    elif is_intern:
+        min_floor, max_floor = 0.0, 1.0
+    elif is_entry:
+        min_floor, max_floor = 1.0, 3.0
+    else:
+        min_floor, max_floor = None, None
+
+    if min_y is not None:
+        if min_floor is not None and min_y < min_floor:
+            # Overwrite accidental low text match with title floor
+            return min_floor, max(max_floor or (min_floor + 3.0), max_y or (min_floor + 3.0))
+        return min_y, max_y
+
+    if min_floor is not None:
+        return min_floor, max_floor
+
+    return 2.0, 5.0
+

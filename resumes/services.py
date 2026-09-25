@@ -6,12 +6,33 @@ from pypdf import PdfReader
 logger = logging.getLogger(__name__)
 
 COMMON_TECH_SKILLS = [
-    "python", "django", "flask", "fastapi", "javascript", "typescript", "react", "vue",
-    "angular", "node.js", "nodejs", "express", "sql", "postgresql", "postgres", "mysql",
-    "sqlite", "mongodb", "redis", "celery", "docker", "kubernetes", "aws", "gcp", "azure",
-    "git", "github", "ci/cd", "rest api", "graphql", "html", "css", "tailwind", "bootstrap",
-    "linux", "bash", "selenium", "playwright", "pandas", "numpy", "pytorch", "tensorflow",
-    "java", "c++", "c#", "golang", "go", "rust", "kafka", "rabbitmq"
+    # Languages & Core
+    "python", "sql", "scala", "java", "golang", "go", "rust", "c++", "c#", "r", "bash", "shell",
+    "javascript", "typescript", "html", "css",
+    # Data Engineering & Processing
+    "spark", "pyspark", "apache spark", "hadoop", "hive", "apache flink", "flink", "apache beam", "beam",
+    "airflow", "apache airflow", "dbt", "kafka", "apache kafka", "presto", "trino", "luigi", "prefect",
+    "dagster", "nifi", "talend", "informatica", "aws glue", "emr", "kinesis",
+    # Data Warehouses & Lakehouses
+    "snowflake", "databricks", "bigquery", "redshift", "synapse", "delta lake", "iceberg", "hudi",
+    # AI / Machine Learning / Deep Learning / LLMs
+    "machine learning", "deep learning", "nlp", "computer vision", "pytorch", "tensorflow", "keras",
+    "scikit-learn", "sklearn", "pandas", "numpy", "scipy", "xgboost", "lightgbm", "llm", "langchain",
+    "llamaindex", "huggingface", "transformers", "mlflow", "kubeflow", "pinecone", "milvus", "chromadb",
+    "weaviate", "generative ai", "genai", "prompt engineering",
+    # Databases & Storage
+    "postgresql", "postgres", "mysql", "sqlite", "oracle", "sql server", "mongodb", "cassandra",
+    "dynamodb", "redis", "elasticsearch", "opensearch", "neo4j",
+    # Cloud & DevOps
+    "aws", "gcp", "google cloud", "azure", "docker", "kubernetes", "terraform", "ansible", "helm",
+    "ci/cd", "jenkins", "github actions", "gitlab", "linux", "git", "github",
+    # Web Frameworks & APIs
+    "django", "flask", "fastapi", "react", "vue", "angular", "node.js", "nodejs", "express",
+    "rest api", "graphql", "selenium", "playwright", "celery", "rabbitmq",
+    # BI & Analytics & Concepts
+    "tableau", "power bi", "looker", "metabase", "superset", "quicksight", "excel",
+    "etl", "elt", "data modeling", "data pipeline", "data warehousing", "data lake", "data governance",
+    "data quality", "data mesh", "stream processing", "batch processing"
 ]
 
 def extract_text_from_pdf(pdf_file) -> str:

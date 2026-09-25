@@ -54,3 +54,43 @@ class MatchingEngineTests(TestCase):
         match = calculate_match_score(job, self.profile)
         self.assertLess(match['score'], 45)
         self.assertIn("Photoshop", match['missing_skills'])
+
+    def test_full_resume_matching(self):
+        from resumes.models import Resume
+        resume_text = """
+        John Doe - Data Engineer
+        Summary: Experienced Data Engineer specializing in PySpark, Apache Airflow, Snowflake, and AWS.
+        Built real-time streaming pipelines with Kafka and distributed ETL with Spark.
+        Education: B.Tech in Computer Science.
+        Projects:
+        - Enterprise Data Lakehouse on AWS and Snowflake.
+        - Orchestrated DAG workflows using Airflow.
+        """
+        resume = Resume.objects.create(
+            user=self.user,
+            name="John_Doe_Data_Engineer_Resume.pdf",
+            extracted_text=resume_text,
+            is_default=True
+        )
+
+        job = Job.objects.create(
+            title="Data Engineer",
+            company_name="Flipkart",
+            location="Bengaluru",
+            work_mode=Job.WorkMode.ONSITE,
+            skills="PySpark, Airflow, Snowflake, AWS, Python, Kafka",
+            experience_min=2.0,
+            description="Looking for a Data Engineer with hands-on PySpark, Apache Airflow, and Snowflake experience to design data lakehouse pipelines on AWS."
+        )
+
+        match = calculate_match_score(job, self.profile, default_resume=resume)
+        self.assertIn('resume_analysis', match)
+        resume_analysis = match['resume_analysis']
+        self.assertTrue(resume_analysis['has_resume'])
+        self.assertGreaterEqual(resume_analysis['score'], 60)
+        self.assertIn("Pyspark", resume_analysis['matched_keywords'])
+        self.assertIn("Airflow", resume_analysis['matched_keywords'])
+        self.assertIn("Snowflake", resume_analysis['matched_keywords'])
+        self.assertIn("breakdown", match)
+        self.assertIn("resume", match['breakdown'])
+

@@ -32,6 +32,7 @@ def job_list_view(request):
     date_range = request.GET.get('date', '').strip()
     show_ignored = request.GET.get('show_ignored', '').lower() in ('true', '1', 'on')
     sort_by = request.GET.get('sort', 'newest').strip()
+    authenticity = request.GET.get('authenticity', '').strip()
 
     # Query items using selector (strictly filters India + Remote and Data roles)
     items = selectors.filter_and_search_jobs(
@@ -46,7 +47,8 @@ def job_list_view(request):
         experience=experience,
         date_range=date_range,
         show_ignored=show_ignored,
-        sort_by=sort_by
+        sort_by=sort_by,
+        authenticity=authenticity
     )
 
     # Server-side pagination: 20 jobs per page
@@ -60,11 +62,19 @@ def job_list_view(request):
 
     experience_choices = [
         ('', 'All Experience Levels'),
-        ('0-1', 'Fresher / Entry (0 - 1 Yrs)'),
+        ('0-2', 'Entry / Fresher (0 - 2 Yrs)'),
+        ('0-1', 'Fresher / Intern (0 - 1 Yrs)'),
         ('1-3', 'Junior (1 - 3 Yrs)'),
         ('3-5', 'Mid-Level (3 - 5 Yrs)'),
         ('5-8', 'Senior (5 - 8 Yrs)'),
         ('8+', 'Lead / Staff (8+ Yrs)'),
+    ]
+
+    authenticity_choices = [
+        ('', 'All Trust Tiers'),
+        ('verified', '🛡️ Verified Employers Only'),
+        ('direct', '🏢 Direct Postings (No Agencies)'),
+        ('no_suspicious', '✓ Hide Suspicious / High-Risk'),
     ]
 
     return render(request, 'jobs/job_list.html', {
@@ -77,6 +87,7 @@ def job_list_view(request):
         'employment_types': Job.EmploymentType.choices,
         'sources': Job.Source.choices,
         'experience_choices': experience_choices,
+        'authenticity_choices': authenticity_choices,
         # Active filter values
         'query': query,
         'selected_location': location,
@@ -87,6 +98,7 @@ def job_list_view(request):
         'selected_min_score': min_score_str,
         'selected_experience': experience,
         'selected_date': date_range,
+        'selected_authenticity': authenticity,
         'show_ignored': show_ignored,
         'sort_by': sort_by,
     })
@@ -275,6 +287,83 @@ def job_create_view(request):
     return render(request, 'jobs/job_form.html', {
         'form': form,
         'title': 'Add Job Manually',
+    })
+
+
+@login_required
+@require_POST
+def job_extract_view(request):
+    """
+    AJAX endpoint: Automatically extracts and structures job attributes from:
+    1. A pasted Job URL (LinkedIn, Indeed, Internshala, Naukri, Greenhouse, Lever, etc.)
+    2. A pasted raw Job Description text.
+    """
+    import json
+    from django.http import JsonResponse
+    from .services.job_extractor import extract_job_from_url, extract_job_from_text
+
+    try:
+        body_data = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        body_data = request.POST
+
+    mode = body_data.get('mode', 'url')
+
+    if mode == 'url':
+        url = body_data.get('url', '').strip()
+        if not url:
+            return JsonResponse({'success': False, 'error': 'Please provide a valid Job URL.'})
+        res = extract_job_from_url(url)
+        return JsonResponse(res)
+
+    elif mode == 'text':
+        text = body_data.get('text', '').strip()
+        if not text:
+            return JsonResponse({'success': False, 'error': 'Please provide the Job Description text.'})
+        res = extract_job_from_text(text)
+        return JsonResponse(res)
+
+    return JsonResponse({'success': False, 'error': 'Invalid extraction mode specified.'})
+
+
+@login_required
+@require_POST
+def job_check_duplicate_view(request):
+    """
+    AJAX endpoint: Checks whether a given job (title, company, location, URL)
+    already exists in the database using 4-tier deduplication.
+    """
+    import json
+    from django.http import JsonResponse
+    from .services.job_extractor import check_job_duplicate
+
+    try:
+        body_data = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        body_data = request.POST
+
+    title = body_data.get('title', '').strip()
+    company_name = body_data.get('company_name', '').strip()
+    location = body_data.get('location', '').strip()
+    external_url = body_data.get('external_url', '').strip()
+
+    if not title and not company_name and not external_url:
+        return JsonResponse({
+            'success': False,
+            'error': 'Please provide at least a Title, Company Name, or URL to check.'
+        })
+
+    dup_info = check_job_duplicate(
+        company_name=company_name,
+        title=title,
+        location=location,
+        external_url=external_url
+    )
+
+    return JsonResponse({
+        'success': True,
+        'duplicate': dup_info,
+        'is_duplicate': dup_info['is_duplicate']
     })
 
 

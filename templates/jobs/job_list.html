@@ -139,15 +139,18 @@
 
         <!-- Quick Filter Tags for Students & Freshers -->
         <div class="d-flex flex-wrap align-items-center gap-2 mb-3 pt-1">
-            <span class="small fw-semibold text-muted me-1"><i class="bi bi-funnel me-1"></i>Student Quick Picks:</span>
-            <a href="{% url 'jobs:list' %}" class="btn btn-sm {% if not selected_experience and not query and not selected_category and not selected_work_mode %}btn-dark{% else %}btn-outline-secondary{% endif %} rounded-pill py-1 px-3" style="font-size: 0.78rem;">
+            <span class="small fw-semibold text-muted me-1"><i class="bi bi-funnel me-1"></i>Quick Picks:</span>
+            <a href="{% url 'jobs:list' %}" class="btn btn-sm {% if not selected_experience and not query and not selected_category and not selected_work_mode and not selected_authenticity %}btn-dark{% else %}btn-outline-secondary{% endif %} rounded-pill py-1 px-3" style="font-size: 0.78rem;">
                 All Jobs
+            </a>
+            <a href="{% url 'jobs:list' %}?authenticity=verified" class="btn btn-sm {% if selected_authenticity == 'verified' %}btn-success text-white{% else %}btn-outline-success{% endif %} rounded-pill py-1 px-3" style="font-size: 0.78rem;">
+                <i class="bi bi-patch-check-fill me-1"></i> Verified Employers Only
+            </a>
+            <a href="{% url 'jobs:list' %}?experience=0-2" class="btn btn-sm {% if selected_experience == '0-2' %}btn-primary text-white{% else %}btn-outline-primary{% endif %} rounded-pill py-1 px-3" style="font-size: 0.78rem;">
+                <i class="bi bi-mortarboard me-1"></i> Entry Level (0–2 yrs)
             </a>
             <a href="{% url 'jobs:list' %}?experience=0-1" class="btn btn-sm {% if selected_experience == '0-1' %}btn-success text-white{% else %}btn-outline-success{% endif %} rounded-pill py-1 px-3" style="font-size: 0.78rem;">
                 <i class="bi bi-mortarboard me-1"></i> Freshers (0–1 yr)
-            </a>
-            <a href="{% url 'jobs:list' %}?experience=1-3" class="btn btn-sm {% if selected_experience == '1-3' %}btn-primary text-white{% else %}btn-outline-primary{% endif %} rounded-pill py-1 px-3" style="font-size: 0.78rem;">
-                <i class="bi bi-person-badge me-1"></i> Junior (1–3 yrs)
             </a>
             <a href="{% url 'jobs:list' %}?q=intern" class="btn btn-sm {% if query == 'intern' %}btn-info text-white{% else %}btn-outline-info{% endif %} rounded-pill py-1 px-3" style="font-size: 0.78rem;">
                 <i class="bi bi-laptop me-1"></i> Internships
@@ -230,16 +233,25 @@
             </div>
         </div>
 
-        <!-- Row 3: Sorting, Toggles & Reset -->
+        <!-- Row 3: Sorting, Trust Tier, Toggles & Reset -->
         <div class="row g-2 align-items-center mt-2 pt-2 border-top">
-            <div class="col-md-6 d-flex align-items-center gap-3">
+            <div class="col-md-7 d-flex align-items-center gap-3 flex-wrap">
                 <div class="d-flex align-items-center gap-2">
-                    <label class="small fw-semibold text-muted text-nowrap">Sort By:</label>
+                    <label class="small fw-semibold text-muted text-nowrap">Sort:</label>
                     <select name="sort" class="form-select form-select-sm" style="width: auto;" onchange="document.getElementById('jobFilterForm').submit();">
                         <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>Newest Discovered</option>
                         <option value="match" {% if sort_by == 'match' %}selected{% endif %}>Highest Match</option>
                         <option value="company_asc" {% if sort_by == 'company_asc' %}selected{% endif %}>Company A–Z</option>
                         <option value="oldest" {% if sort_by == 'oldest' %}selected{% endif %}>Oldest</option>
+                    </select>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                    <label class="small fw-semibold text-muted text-nowrap"><i class="bi bi-shield-check text-primary me-1"></i>Trust:</label>
+                    <select name="authenticity" class="form-select form-select-sm" style="width: auto;" onchange="document.getElementById('jobFilterForm').submit();">
+                        {% for val, label in authenticity_choices %}
+                            <option value="{{ val }}" {% if selected_authenticity == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
                     </select>
                 </div>
 
@@ -249,7 +261,7 @@
                 </div>
             </div>
 
-            <div class="col-md-6 text-md-end">
+            <div class="col-md-5 text-md-end">
                 <a href="{% url 'jobs:list' %}" class="btn btn-sm btn-link text-muted me-2 text-decoration-none">Reset Filters</a>
                 <button type="submit" class="btn btn-sm btn-outline-custom px-3">
                     <i class="bi bi-funnel me-1"></i> Apply Filters
@@ -264,12 +276,17 @@
     {% for item in page_obj %}
     <div class="col-md-6 col-lg-4">
         <div class="job-card h-100 d-flex flex-column border-0 shadow-sm rounded-4 p-4 bg-white position-relative {% if item.is_ignored %}opacity-75 border-warning{% endif %}">
-            <!-- Header: Company & Category Badge -->
+            <!-- Header: Company & Category & Authenticity Badge -->
             <div class="d-flex justify-content-between align-items-start mb-2">
-                <span class="job-company text-truncate fw-semibold text-dark" style="max-width: 170px;">{{ item.job.company_name }}</span>
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle small px-2 py-1 rounded-pill">
-                    {{ item.job.get_job_category_display }}
-                </span>
+                <span class="job-company text-truncate fw-semibold text-dark" style="max-width: 150px;">{{ item.job.company_name }}</span>
+                <div class="d-flex gap-1 flex-wrap justify-content-end">
+                    <span class="badge bg-{{ item.authenticity.badge_color }}-subtle text-{{ item.authenticity.badge_color }} border border-{{ item.authenticity.badge_color }}-subtle px-2 py-0 rounded-pill" title="{{ item.authenticity.summary }}" style="font-size: 0.72rem;">
+                        <i class="bi {{ item.authenticity.badge_icon }} me-1"></i>{{ item.authenticity.badge_label }}
+                    </span>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-0 rounded-pill" style="font-size: 0.72rem;">
+                        {{ item.job.get_job_category_display }}
+                    </span>
+                </div>
             </div>
 
             <!-- Title -->
@@ -318,7 +335,7 @@
                 </div>
             </div>
 
-            <!-- Match Score Indicator -->
+            <!-- Match Score Indicator & Full Resume Alignment -->
             <div class="p-2 rounded-3 bg-light border mb-2">
                 <div class="d-flex justify-content-between align-items-center mb-1">
                     <span class="small fw-semibold text-muted">Profile Fit</span>
@@ -329,6 +346,14 @@
                 <div class="progress" style="height: 4px;">
                     <div class="progress-bar {% if item.score >= 80 %}bg-success{% elif item.score >= 50 %}bg-warning{% else %}bg-secondary{% endif %}" role="progressbar" style="width: {{ item.score }}%;"></div>
                 </div>
+                {% if item.match_info.resume_analysis.has_resume %}
+                    <div class="small text-muted mt-1 d-flex align-items-center justify-content-between" style="font-size: 0.72rem;">
+                        <span><i class="bi bi-file-earmark-person text-primary me-1"></i>Resume Match: <strong class="text-dark">{{ item.match_info.resume_analysis.score }}% ({{ item.match_info.resume_analysis.fit_level }})</strong></span>
+                        {% if item.match_info.resume_analysis.matched_keywords %}
+                            <span class="badge bg-info-subtle text-info-emphasis rounded-pill" style="font-size: 0.68rem;">{{ item.match_info.resume_analysis.overlap_count }} matched</span>
+                        {% endif %}
+                    </div>
+                {% endif %}
                 {% if item.match_info.reasons %}
                     <div class="small text-muted mt-1 text-truncate" style="font-size: 0.72rem;">
                         <i class="bi bi-check2 text-success me-1"></i>{{ item.match_info.reasons.0 }}
